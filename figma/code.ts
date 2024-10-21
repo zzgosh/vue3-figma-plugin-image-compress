@@ -1,34 +1,56 @@
 /// <reference types="@figma/plugin-typings" />
-// This plugin will open a window to prompt the user to enter a number, and
-// it will then create that many rectangles on the screen.
 
-// This file holds the main code for the plugins. It has access to the *document*.
-// You can access browser APIs in the <script> tag inside "ui.html" which has a
-// full browser environment (see documentation).
+figma.showUI(__html__)
 
-// This shows the HTML page in "ui.html".
-figma.showUI(__html__);
+figma.ui.resize(300, 200)
 
-// Calls to "parent.postMessage" from within the HTML page will trigger this
-// callback. The callback will be passed the "pluginMessage" property of the
-// posted message.
-figma.ui.onmessage = msg => {
-  // One way of distinguishing between different types of messages sent from
-  // your HTML page is to use an object with a "type" property like this.
-  if (msg.type === 'create-rectangles') {
-    const nodes: SceneNode[] = [];
-    for (let i = 0; i < msg.count; i++) {
-      const rect = figma.createRectangle();
-      rect.x = i * 150;
-      rect.fills = [{type: 'SOLID', color: {r: 1, g: 0.5, b: 0}}];
-      figma.currentPage.appendChild(rect);
-      nodes.push(rect);
+figma.ui.onmessage = async (msg) => {
+  if (msg.type === 'export-elements') {
+    const selection = figma.currentPage.selection
+    if (selection.length === 0) {
+      figma.notify('请至少选择一个元素进行导出')
+      return
     }
-    figma.currentPage.selection = nodes;
-    figma.viewport.scrollAndZoomIntoView(nodes);
-  }
 
-  // Make sure to close the plugin when you're done. Otherwise the plugin will
-  // keep running, which shows the cancel button at the bottom of the screen.
-  figma.closePlugin();
-};
+    interface ExportFile {
+      buffer: Uint8Array
+      fileName: string
+      format: string
+      scale: string
+    }
+
+    const files: ExportFile[] = []
+    for (const node of selection) {
+      if ('exportAsync' in node) {
+        try {
+          const settings = {
+            format: msg.format.toUpperCase(),
+            constraint: { type: 'SCALE', value: parseInt(msg.exportScale) }
+          }
+
+          const buffer = await node.exportAsync(settings)
+          files.push({
+            buffer: buffer,
+            fileName: `${node.name}${msg.exportScale !== '1x' ? '_' + msg.exportScale : ''}.${msg.format.toLowerCase()}`,
+            format: msg.format.toLowerCase(),
+            scale: msg.exportScale
+          })
+        } catch (error) {
+          console.error(`导出 ${node.name} 失败:`, error)
+          figma.notify(`导出 ${node.name} 失败`)
+        }
+      } else {
+        figma.notify(`无法导出 ${(node as SceneNode).name}，因为它不支持导出`)
+      }
+    }
+
+    // 一次性发送所有文件
+    figma.ui.postMessage({
+      type: 'download',
+      files: files,
+      compressionLevel: msg.compressionLevel
+    })
+
+    figma.notify(`已导出 ${files.length} 个文件`)
+  }
+}

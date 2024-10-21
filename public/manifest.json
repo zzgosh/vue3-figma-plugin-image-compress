@@ -1,10 +1,8 @@
 {
-  "name": "your plugin name",
-  "id": "your plugin id",
+  "name": "Image Compress",
+  "id": "1430010752657349303",
   "api": "1.0.0",
   "main": "code.js",
-  "editorType": [
-    "figma"
-  ],
+  "editorType": ["figma"],
   "ui": "index.html"
 }
