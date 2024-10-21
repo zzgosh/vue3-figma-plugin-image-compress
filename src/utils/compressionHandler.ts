@@ -5,7 +5,7 @@ export const compressionHandler = async (
   format: string,
   compressionLevel: string,
   originalFileName: string
-): Promise<{ blob: Blob; fileName: string }> => {
+): Promise<{ blob: Blob; fileName: string; compressedSize: number }> => {
   const originalSize = blob.size
   const options = await getCompressionOptions(compressionLevel, originalSize)
   const blobFile = new File([blob], originalFileName, { type: blob.type })
@@ -25,7 +25,7 @@ export const compressionHandler = async (
 
   const fileName = `${originalFileName.split('.')[0]}_compressed.${format}`
 
-  return { blob: compressedBlob, fileName }
+  return { blob: compressedBlob, fileName, compressedSize: compressedBlob.size }
 }
 
 const getCompressionOptions = async (level: string, originalSize: number) => {

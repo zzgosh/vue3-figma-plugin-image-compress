@@ -5,6 +5,8 @@ import { handleSingleFile, handleMultipleFiles } from './utils/fileHandler'
 const format = ref('PNG')
 const compressionLevel = ref('normal')
 const exportScale = ref('1x')
+const originalSize = ref(0)
+const compressedSize = ref(0)
 
 const exportElements = () => {
   parent.postMessage(
@@ -17,14 +19,26 @@ onMounted(() => {
   window.onmessage = async (event) => {
     const msg = event.data.pluginMessage
     if (msg.type === 'download') {
+      let result
       if (msg.files.length === 1) {
-        await handleSingleFile(msg.files[0], compressionLevel.value)
+        result = await handleSingleFile(msg.files[0], compressionLevel.value)
       } else {
-        await handleMultipleFiles(msg.files, compressionLevel.value)
+        result = await handleMultipleFiles(msg.files, compressionLevel.value)
       }
+      originalSize.value = result.originalSize
+      compressedSize.value = result.compressedSize
     }
   }
 })
+
+const formatSize = (size: number) => {
+  return (size / 1024).toFixed(2) + ' KiB'
+}
+
+const compressionRatio = () => {
+  if (originalSize.value === 0) return '0%'
+  return ((1 - compressedSize.value / originalSize.value) * 100).toFixed(2) + '%'
+}
 </script>
 
 <template>
@@ -47,6 +61,11 @@ onMounted(() => {
       <option value="4x">4x</option>
     </select>
     <button @click="exportElements">导出</button>
+    <div v-if="originalSize > 0" class="size-info">
+      <p>原始大小: {{ formatSize(originalSize) }}</p>
+      <p>压缩后大小: {{ formatSize(compressedSize) }}</p>
+      <p>压缩率: {{ compressionRatio() }}</p>
+    </div>
   </div>
 </template>
 
@@ -61,5 +80,10 @@ select,
 button {
   margin: 10px;
   padding: 5px;
+}
+
+.size-info {
+  margin-top: 20px;
+  text-align: left;
 }
 </style>

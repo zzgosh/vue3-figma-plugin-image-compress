@@ -2,7 +2,7 @@
 
 figma.showUI(__html__)
 
-figma.ui.resize(300, 200)
+figma.ui.resize(300, 400)
 
 figma.ui.onmessage = async (msg) => {
   if (msg.type === 'export-elements') {
