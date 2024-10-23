@@ -8,7 +8,12 @@ interface FileData {
   scale: string
 }
 
-export const handleSingleFile = async (file: FileData, compressionLevel: string): Promise<{ originalSize: number; compressedSize: number }> => {
+export type CompressionLevel = 'light' | 'normal' | 'extreme' | 'none'
+
+export const handleSingleFile = async (
+  file: FileData,
+  compressionLevel: CompressionLevel
+): Promise<{ originalSize: number; compressedSize: number }> => {
   let blob = new Blob([file.buffer], { type: `image/${file.format}` })
   let fileName = file.fileName
   const originalSize = blob.size
@@ -16,7 +21,8 @@ export const handleSingleFile = async (file: FileData, compressionLevel: string)
   if (compressionLevel !== 'none') {
     const result = await compressionHandler(blob, file.format, compressionLevel, fileName)
     blob = result.blob
-    fileName = result.fileName.replace('.', `${file.scale !== '1x' ? '_' + file.scale : ''}.`)
+    // 移除原有的缩放标识，让 fileName 保持原始文件名
+    fileName = result.fileName
     downloadFile(blob, fileName)
     return { originalSize, compressedSize: result.compressedSize }
   } else {
@@ -25,7 +31,10 @@ export const handleSingleFile = async (file: FileData, compressionLevel: string)
   }
 }
 
-export const handleMultipleFiles = async (files: FileData[], compressionLevel: string): Promise<{ originalSize: number; compressedSize: number }> => {
+export const handleMultipleFiles = async (
+  files: FileData[],
+  compressionLevel: CompressionLevel
+): Promise<{ originalSize: number; compressedSize: number }> => {
   let totalOriginalSize = 0
   let totalCompressedSize = 0
 
@@ -38,7 +47,7 @@ export const handleMultipleFiles = async (files: FileData[], compressionLevel: s
       if (compressionLevel !== 'none') {
         const result = await compressionHandler(blob, file.format, compressionLevel, fileName)
         blob = result.blob
-        fileName = result.fileName.replace('.', `${file.scale !== '1x' ? '_' + file.scale : ''}.`)
+        fileName = result.fileName // 移除额外的缩放标识处理
         totalCompressedSize += result.compressedSize
       } else {
         totalCompressedSize += blob.size

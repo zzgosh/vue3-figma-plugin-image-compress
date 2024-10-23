@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { handleSingleFile, handleMultipleFiles } from './utils/fileHandler'
+import type { CompressionLevel } from './utils/fileHandler'
 
 const format = ref('PNG')
-const compressionLevel = ref('normal')
+const compressionLevel = ref<CompressionLevel>('normal')
 const exportScale = ref('1x')
 const originalSize = ref(0)
 const compressedSize = ref(0)

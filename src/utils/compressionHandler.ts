@@ -1,9 +1,18 @@
 import imageCompression from 'browser-image-compression'
 
+const compressionLevelMap = {
+  light: 'light_compressed',
+  normal: 'medium_compressed',
+  extreme: 'max_compressed',
+  none: ''
+} as const
+
+type CompressionLevel = keyof typeof compressionLevelMap
+
 export const compressionHandler = async (
   blob: Blob,
   format: string,
-  compressionLevel: string,
+  compressionLevel: CompressionLevel,
   originalFileName: string
 ): Promise<{ blob: Blob; fileName: string; compressedSize: number }> => {
   const originalSize = blob.size
@@ -23,7 +32,8 @@ export const compressionHandler = async (
   const compressedFile = await imageCompression(blobFile, options)
   const compressedBlob = new Blob([await compressedFile.arrayBuffer()], { type: `image/${format}` })
 
-  const fileName = `${originalFileName.split('.')[0]}_compressed.${format}`
+  const compressionSuffix = compressionLevel !== 'none' ? `_${compressionLevelMap[compressionLevel]}` : ''
+  const fileName = `${originalFileName.split('.')[0]}${compressionSuffix}.${format}`
 
   return { blob: compressedBlob, fileName, compressedSize: compressedBlob.size }
 }
