@@ -99,7 +99,7 @@ const compressionRatio = () => {
 // 新增：获取文件数量的计算属性
 const getFileCountText = () => {
   const count = selectedCount.value
-  return `共完成压缩 ${count} ${count > 1 ? '个' : '张'}图片`
+  return `共完成压缩 ${count} 张图片`
 }
 </script>
 
