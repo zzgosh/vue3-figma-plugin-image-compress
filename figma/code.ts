@@ -2,7 +2,23 @@
 
 figma.showUI(__html__)
 
-figma.ui.resize(300, 400)
+figma.ui.resize(300, 300)
+
+// 新增：发送初始选中状态
+figma.ui.postMessage({
+  type: 'selectionChange',
+  count: figma.currentPage.selection.length
+})
+
+// 新增：监听选中变化
+figma.on('selectionchange', () => {
+  const selection = figma.currentPage.selection
+  figma.ui.postMessage({
+    type: 'selectionChange',
+    count: selection.length,
+    elementIds: selection.map((node) => node.id) // 添加元素 ID
+  })
+})
 
 figma.ui.onmessage = async (msg) => {
   if (msg.type === 'export-elements') {
@@ -48,7 +64,8 @@ figma.ui.onmessage = async (msg) => {
     figma.ui.postMessage({
       type: 'download',
       files: files,
-      compressionLevel: msg.compressionLevel
+      compressionLevel: msg.compressionLevel,
+      elementIds: figma.currentPage.selection.map((node) => node.id) // 确保包含元素 ID
     })
 
     figma.notify(`已导出 ${files.length} 个文件`)
