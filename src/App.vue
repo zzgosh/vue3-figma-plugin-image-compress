@@ -4,9 +4,9 @@ import { handleSingleFile, handleMultipleFiles } from './utils/fileHandler'
 import type { CompressionLevel } from './utils/fileHandler'
 import { ArrowPathIcon } from '@heroicons/vue/20/solid'
 
-const format = ref('PNG')
+const format = ref('JPG') // 修改默认值为 JPG
 const compressionLevel = ref<CompressionLevel>('normal')
-const exportScale = ref('1x')
+const exportScale = ref('2x') // 修改默认值为 2x
 const originalSize = ref(0)
 const compressedSize = ref(0)
 const selectedCount = ref(0)
@@ -113,7 +113,7 @@ const getFileCountText = () => {
         class="flex-1 block rounded-md border-0 py-1.5 pl-3 pr-10 text-sm text-gray-950 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
       >
         <option value="PNG">PNG</option>
-        <option value="JPG">JPEG</option>
+        <option value="JPG">JPG</option>
       </select>
     </div>
 
