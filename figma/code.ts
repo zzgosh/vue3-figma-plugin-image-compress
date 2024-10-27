@@ -24,7 +24,7 @@ figma.ui.onmessage = async (msg) => {
   if (msg.type === 'export-elements') {
     const selection = figma.currentPage.selection
     if (selection.length === 0) {
-      figma.notify('请至少选择一个元素进行导出')
+      figma.notify('Please select at least one element to export')
       return
     }
 
@@ -52,11 +52,11 @@ figma.ui.onmessage = async (msg) => {
             scale: msg.exportScale
           })
         } catch (error) {
-          console.error(`导出 ${node.name} 失败:`, error)
-          figma.notify(`导出 ${node.name} 失败`)
+          console.error(`Failed to export ${node.name}:`, error)
+          figma.notify(`Failed to export ${node.name}`)
         }
       } else {
-        figma.notify(`无法导出 ${(node as SceneNode).name}，因为它不支持导出`)
+        figma.notify(`Cannot export ${(node as SceneNode).name}, it doesn't support exporting`)
       }
     }
 
@@ -71,7 +71,7 @@ figma.ui.onmessage = async (msg) => {
     // 使用一次性监听器
     const messageHandler = (response) => {
       if (response.type === 'export-complete') {
-        figma.notify(`已导出 ${files.length} 个文件`)
+        figma.notify(`Exported ${files.length} file${files.length > 1 ? 's' : ''}`)
         // 移除监听器
         figma.ui.off('message', messageHandler)
       }

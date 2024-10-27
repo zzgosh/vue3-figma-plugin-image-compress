@@ -81,7 +81,7 @@ const formatSize = (size: number) => {
   return (size / 1024).toFixed(2) + ' KB'
 }
 
-// 修改压缩率计算函数，不带百分号返回
+// 修改压缩率计算函数，���带百分号返回
 const compressionRatio = () => {
   if (originalSize.value === 0) return '0'
   return ((1 - compressedSize.value / originalSize.value) * 100).toFixed(1)
@@ -90,14 +90,14 @@ const compressionRatio = () => {
 // 新增：获取文件数量的计算属性
 const getFileCountText = () => {
   const count = selectedCount.value
-  return `共完成压缩 ${count} 张图片`
+  return `Compressed ${count} image${count > 1 ? 's' : ''}`
 }
 </script>
 
 <template>
   <div class="py-4 px-5">
     <div class="flex items-center mb-4">
-      <label for="format" class="flex-none w-[72px] block text-sm font-medium leading-6 text-gray-500">图片格式</label>
+      <label for="format" class="flex-none w-24 block text-sm leading-6 text-gray-500">Format</label>
       <select
         id="format"
         v-model="format"
@@ -109,21 +109,21 @@ const getFileCountText = () => {
     </div>
 
     <div class="flex items-center mb-4">
-      <label for="compression" class="flex-none w-[72px] block text-sm font-medium leading-6 text-gray-500">压缩级别</label>
+      <label for="compression" class="flex-none w-24 block text-sm leading-6 text-gray-500">Compression</label>
       <select
         id="compression"
         v-model="compressionLevel"
         class="flex-1 block rounded-md border-0 py-1.5 pl-3 pr-10 text-sm text-gray-950 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
       >
-        <option value="none">不压缩</option>
-        <option value="light">轻微压缩</option>
-        <option value="normal">普通压缩</option>
-        <option value="extreme">极致压缩</option>
+        <option value="none">None</option>
+        <option value="light">Light</option>
+        <option value="normal">Normal</option>
+        <option value="extreme">Extreme</option>
       </select>
     </div>
 
     <div class="flex items-center mb-4">
-      <label for="scale" class="flex-none w-[72px] block text-sm font-medium leading-6 text-gray-500">导出比例</label>
+      <label for="scale" class="flex-none w-24 block text-sm leading-6 text-gray-500">Scale</label>
       <select
         id="scale"
         v-model="exportScale"
@@ -143,12 +143,12 @@ const getFileCountText = () => {
       class="w-full inline-flex items-center justify-center rounded-md px-3 py-2 text-sm text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
       :class="[selectedCount === 0 ? 'bg-gray-400 cursor-not-allowed' : isExporting ? 'bg-blue-500' : 'bg-blue-500 hover:bg-blue-600']"
     >
-      {{ isExporting ? '正在导出...' : `导出 (${selectedCount})` }}
+      {{ isExporting ? 'Exporting...' : `Export (${selectedCount})` }}
     </button>
 
     <!-- 替换提示信息部分 -->
     <div class="mt-4">
-      <div v-if="selectedCount === 0" class="text-sm text-gray-500">请选择需要导出的图片</div>
+      <div v-if="selectedCount === 0" class="text-sm text-gray-500">Please select images to export</div>
 
       <div v-if="selectedCount > 0 && originalSize > 0" class="text-sm text-gray-950">
         <p class="mb-2">{{ getFileCountText() }}</p>
