@@ -16,7 +16,6 @@ const compressedElementIds = ref<string[]>([])
 
 const exportElements = async () => {
   if (isExporting.value) return
-
   isExporting.value = true
 
   try {
@@ -44,8 +43,10 @@ onMounted(() => {
         }
         originalSize.value = result.originalSize
         compressedSize.value = result.compressedSize
-        // 记录这次压缩的元素 ID
-        compressedElementIds.value = msg.elementIds // 需要从 Figma 插件传递
+        compressedElementIds.value = msg.elementIds
+
+        // 通知 Figma 插件处理完成
+        parent.postMessage({ pluginMessage: { type: 'export-complete' } }, '*')
       } finally {
         isExporting.value = false
       }

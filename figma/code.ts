@@ -60,14 +60,23 @@ figma.ui.onmessage = async (msg) => {
       }
     }
 
-    // 一次性发送所有文件
+    // 发送文件数据到 UI
     figma.ui.postMessage({
       type: 'download',
       files: files,
       compressionLevel: msg.compressionLevel,
-      elementIds: figma.currentPage.selection.map((node) => node.id) // 确保包含元素 ID
+      elementIds: figma.currentPage.selection.map((node) => node.id)
     })
 
-    figma.notify(`已导出 ${files.length} 个文件`)
+    // 使用一次性监听器
+    const messageHandler = (response) => {
+      if (response.type === 'export-complete') {
+        figma.notify(`已导出 ${files.length} 个文件`)
+        // 移除监听器
+        figma.ui.off('message', messageHandler)
+      }
+    }
+
+    figma.ui.on('message', messageHandler)
   }
 }
