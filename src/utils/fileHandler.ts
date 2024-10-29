@@ -1,5 +1,7 @@
 import { compressionHandler } from './compressionHandler'
 import { createZip } from './zipHandler'
+import { type CompressionLevel } from './constants'
+import pLimit from 'p-limit'
 
 interface FileData {
   buffer: ArrayBuffer
@@ -8,25 +10,28 @@ interface FileData {
   scale: string
 }
 
-export type CompressionLevel = 'light' | 'normal' | 'extreme' | 'none'
-
 export const handleSingleFile = async (
   file: FileData,
-  compressionLevel: CompressionLevel
+  compressionLevel: CompressionLevel,
+  enableSuffix: boolean
 ): Promise<{ originalSize: number; compressedSize: number }> => {
   let blob = new Blob([file.buffer], { type: `image/${file.format}` })
-  let fileName = file.fileName
   const originalSize = blob.size
 
+  // 先处理基本文件名（包含缩放后缀）
+  const baseName = file.fileName.split('.')[0]
+  const scaleStr = enableSuffix ? `_${file.scale}` : ''
+  const extension = `.${file.format.toLowerCase()}`
+  const baseFileName = `${baseName}${scaleStr}${extension}` // 包含缩放后缀的基本文件名
+
   if (compressionLevel !== 'none') {
-    const result = await compressionHandler(blob, file.format, compressionLevel, fileName)
+    // 传入包含缩放后缀的文件名，而不是原始文件名
+    const result = await compressionHandler(blob, file.format, compressionLevel, baseFileName, enableSuffix)
     blob = result.blob
-    // 移除原有的缩放标识，让 fileName 保持原始文件名
-    fileName = result.fileName
-    downloadFile(blob, fileName)
+    downloadFile(blob, result.fileName)
     return { originalSize, compressedSize: result.compressedSize }
   } else {
-    downloadFile(blob, fileName)
+    downloadFile(blob, baseFileName)
     return { originalSize, compressedSize: originalSize }
   }
 }
@@ -35,31 +40,52 @@ export const handleMultipleFiles = async (
   files: FileData[],
   compressionLevel: CompressionLevel
 ): Promise<{ originalSize: number; compressedSize: number }> => {
+  const limit = pLimit(3) // 限制同时处理3个文件
   let totalOriginalSize = 0
   let totalCompressedSize = 0
 
   const processedFiles = await Promise.all(
-    files.map(async (file) => {
-      let blob = new Blob([file.buffer], { type: `image/${file.format}` })
-      let fileName = file.fileName
-      totalOriginalSize += blob.size
+    files.map((file) =>
+      limit(async () => {
+        let blob = new Blob([file.buffer], { type: `image/${file.format}` })
+        // 先处理基本文件名（包含缩放后缀）
+        const baseName = file.fileName.split('.')[0]
+        const scaleStr = `_${file.scale}` // 多文件时总是添加缩放后缀
+        const extension = `.${file.format.toLowerCase()}`
+        const baseFileName = `${baseName}${scaleStr}${extension}`
+        let fileName = baseFileName
 
-      if (compressionLevel !== 'none') {
-        const result = await compressionHandler(blob, file.format, compressionLevel, fileName)
-        blob = result.blob
-        fileName = result.fileName // 移除额外的缩放标识处理
-        totalCompressedSize += result.compressedSize
-      } else {
-        totalCompressedSize += blob.size
-      }
+        totalOriginalSize += blob.size
 
-      return { blob, fileName }
-    })
+        if (compressionLevel !== 'none') {
+          const result = await compressionHandler(blob, file.format, compressionLevel, baseFileName, true)
+          blob = result.blob
+          fileName = result.fileName
+          totalCompressedSize += result.compressedSize
+        } else {
+          totalCompressedSize += blob.size
+          fileName = baseFileName
+        }
+
+        return { blob, fileName }
+      })
+    )
   )
 
   const zipBlob = await createZip(processedFiles)
-  const timestamp = new Date().toISOString().replace(/[-:]/g, '').replace('T', '_').slice(0, -5)
-  const zipFileName = `exported_files_${timestamp}.zip`
+  const timestamp = new Date()
+    .toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    })
+    .replace(/\//g, '-')
+    .replace(',', ' at')
+  const zipFileName = `image_compressed_${timestamp}.zip`
   downloadFile(zipBlob, zipFileName)
 
   return { originalSize: totalOriginalSize, compressedSize: totalCompressedSize }

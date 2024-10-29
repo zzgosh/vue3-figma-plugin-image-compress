@@ -1,58 +1,92 @@
 import imageCompression from 'browser-image-compression'
+import { compressionSuffixMap, type CompressionLevel } from './constants'
 
-const compressionLevelMap = {
-  light: 'light_compressed',
-  normal: 'medium_compressed',
-  extreme: 'max_compressed',
-  none: ''
-} as const
-
-type CompressionLevel = keyof typeof compressionLevelMap
+// 自定义错误类
+class CompressionError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'CompressionError'
+  }
+}
 
 export const compressionHandler = async (
   blob: Blob,
   format: string,
   compressionLevel: CompressionLevel,
-  originalFileName: string
+  originalFileName: string,
+  enableSuffix: boolean = false
 ): Promise<{ blob: Blob; fileName: string; compressedSize: number }> => {
+  // 参数验证
+  if (!blob) throw new CompressionError('Image blob is required')
+  if (!format) throw new CompressionError('Image format is required')
+  if (!originalFileName) throw new CompressionError('File name is required')
+
   const originalSize = blob.size
   const isJPEG = format.toLowerCase() === 'jpeg' || format.toLowerCase() === 'jpg'
+  let originalImage: ImageBitmap | null = null
+  let compressedFile: File | null = null
 
-  // 获取压缩配置选项
-  const options = await getCompressionOptions(compressionLevel, originalSize, isJPEG)
-  // 将 Blob 转换为 File 对象，便于后续处理
-  const blobFile = new File([blob], originalFileName, { type: blob.type })
+  try {
+    // 获取压缩配置选项
+    const options = await getCompressionOptions(compressionLevel, originalSize, isJPEG)
 
-  // 获取原始图像尺寸
-  const originalImage = await createImageBitmap(blobFile)
-  const originalWidth = originalImage.width
-  const originalHeight = originalImage.height
+    // 将 Blob 转换为 File 对象
+    const blobFile = new File([blob], originalFileName, { type: blob.type })
 
-  // 设置最大宽高为原图最大边长，确保不会超出原始尺寸
-  options.maxWidthOrHeight = Math.max(originalWidth, originalHeight)
-
-  // 执行压缩
-  const compressedFile = await imageCompression(blobFile, options)
-  // 将压缩后的文件转换为指定格式的 Blob
-  const compressedBlob = new Blob([await compressedFile.arrayBuffer()], { type: `image/${format}` })
-
-  // 如果压缩后体积反而变大，返回原始文件
-  if (compressedBlob.size > originalSize) {
-    return {
-      blob: blob,
-      fileName: originalFileName,
-      compressedSize: originalSize
+    // 获取原始图像尺寸
+    try {
+      originalImage = await createImageBitmap(blobFile)
+      options.maxWidthOrHeight = Math.max(originalImage.width, originalImage.height)
+    } catch (error) {
+      throw new CompressionError('Failed to read image dimensions')
     }
-  }
 
-  // 生成带压缩级别标识的文件名
-  const compressionSuffix = compressionLevel !== 'none' ? `_${compressionLevelMap[compressionLevel]}` : ''
-  const fileName = `${originalFileName.split('.')[0]}${compressionSuffix}.${format}`
+    // 执行压缩
+    try {
+      compressedFile = await imageCompression(blobFile, options)
+    } catch (error) {
+      throw new CompressionError(`Compression failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
 
-  return {
-    blob: compressedBlob, // 压缩后的文件数据
-    fileName: fileName, // 新的文件名
-    compressedSize: compressedBlob.size // 压缩后的文件大小
+    // 转换为指定格式的 Blob
+    const compressedBlob = new Blob([await compressedFile.arrayBuffer()], {
+      type: `image/${format}`
+    })
+
+    // 压缩效果验证
+    if (compressedBlob.size > originalSize) {
+      console.warn('Compressed size is larger than original, returning original file')
+      return {
+        blob: blob,
+        fileName: originalFileName,
+        compressedSize: originalSize
+      }
+    }
+
+    // 生成文件名
+    const compressionSuffix = compressionLevel !== 'none' && enableSuffix ? `${compressionSuffixMap[compressionLevel]}_compressed` : ''
+    const fileName = `${originalFileName.split('.')[0]}${compressionSuffix}.${format}`
+
+    return {
+      blob: compressedBlob,
+      fileName: fileName,
+      compressedSize: compressedBlob.size
+    }
+  } catch (error) {
+    // 统一错误处理
+    if (error instanceof CompressionError) {
+      throw error
+    }
+    throw new CompressionError(`Unexpected error during compression: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  } finally {
+    // 资源清理
+    if (originalImage) {
+      originalImage.close()
+    }
+    // 手动触发垃圾回收建议
+    if (compressedFile) {
+      compressedFile = null
+    }
   }
 }
 
@@ -94,7 +128,7 @@ const getCompressionOptions = async (level: string, originalSize: number, isJPEG
         quality = baseParams.quality + 0.05
         targetSizeMB = sizeMB * (baseParams.ratio + 0.15)
         break
-      case 'normal':
+      case 'medium':
         quality = baseParams.quality
         targetSizeMB = sizeMB * baseParams.ratio
         break
@@ -113,7 +147,7 @@ const getCompressionOptions = async (level: string, originalSize: number, isJPEG
         quality = baseParams.quality - 0.2
         targetSizeMB = sizeMB * (baseParams.ratio - 0.1)
         break
-      case 'normal':
+      case 'medium':
         quality = baseParams.quality - 0.3
         targetSizeMB = sizeMB * (baseParams.ratio - 0.2)
         break

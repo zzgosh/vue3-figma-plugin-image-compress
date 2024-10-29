@@ -1,18 +1,31 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { handleSingleFile, handleMultipleFiles } from './utils/fileHandler'
-import type { CompressionLevel } from './utils/fileHandler'
+import { Switch, SwitchDescription, SwitchGroup, SwitchLabel } from '@headlessui/vue'
+import { compressionSuffixMap, type CompressionLevel } from './utils/constants'
 
 const format = ref('JPG') // 修改默认值为 JPG
-const compressionLevel = ref<CompressionLevel>('normal')
+const compressionLevel = ref<CompressionLevel>('medium')
 const exportScale = ref('1x') // 修改默认值为 1x
 const originalSize = ref(0)
 const compressedSize = ref(0)
 const selectedCount = ref(0)
 const isExporting = ref(false) // 新增：跟踪导出状态
+const enabled = ref<boolean>(false)
 
 // 新增：跟踪已压缩元素的 ID 集合
 const compressedElementIds = ref<string[]>([])
+
+const errorMessage = ref('')
+const showError = ref(false)
+
+const showErrorMessage = (message: string) => {
+  errorMessage.value = message
+  showError.value = true
+  setTimeout(() => {
+    showError.value = false
+  }, 3000)
+}
 
 const exportElements = async () => {
   if (isExporting.value) return
@@ -21,7 +34,13 @@ const exportElements = async () => {
   try {
     await parent.postMessage(
       {
-        pluginMessage: { type: 'export-elements', format: format.value, compressionLevel: compressionLevel.value, exportScale: exportScale.value }
+        pluginMessage: {
+          type: 'export-elements',
+          format: format.value,
+          compressionLevel: compressionLevel.value,
+          exportScale: exportScale.value,
+          enableSuffix: enabled.value
+        }
       },
       '*'
     )
@@ -37,9 +56,9 @@ onMounted(() => {
       try {
         let result
         if (msg.files.length === 1) {
-          result = await handleSingleFile(msg.files[0], compressionLevel.value)
+          result = await handleSingleFile(msg.files[0], compressionLevel.value as CompressionLevel, enabled.value)
         } else {
-          result = await handleMultipleFiles(msg.files, compressionLevel.value)
+          result = await handleMultipleFiles(msg.files, compressionLevel.value as CompressionLevel)
         }
         originalSize.value = result.originalSize
         compressedSize.value = result.compressedSize
@@ -47,6 +66,9 @@ onMounted(() => {
 
         // 通知 Figma 插件处理完成
         parent.postMessage({ pluginMessage: { type: 'export-complete' } }, '*')
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : '未知错误'
+        showErrorMessage(`压缩失败: ${errorMessage}`)
       } finally {
         isExporting.value = false
       }
@@ -81,7 +103,7 @@ const formatSize = (size: number) => {
   return (size / 1024).toFixed(2) + ' KB'
 }
 
-// 修改压缩率计算函数，���带百分号返回
+// 修改压缩率计算函数，带百分号返回
 const compressionRatio = () => {
   if (originalSize.value === 0) return '0'
   return ((1 - compressedSize.value / originalSize.value) * 100).toFixed(1)
@@ -92,12 +114,21 @@ const getFileCountText = () => {
   const count = selectedCount.value
   return `Compressed ${count} image${count > 1 ? 's' : ''}`
 }
+
+// 新增：获取文件名的示例
+// const getFileNameExample = () => {
+//   const baseName = 'image_example'
+//   const scaleStr = exportScale.value !== '1x' && enabled.value ? `_${exportScale.value}` : ''
+//   const compressionStr = compressionLevel.value !== 'none' && enabled.value ? compressionSuffixMap[compressionLevel.value] : ''
+//   const extension = `.${format.value.toLowerCase()}`
+//   return `${baseName}${scaleStr}${compressionStr}${extension}`
+// }
 </script>
 
 <template>
-  <div class="py-4 px-5">
+  <div class="pt-5 px-5">
     <div class="flex items-center mb-4">
-      <label for="format" class="flex-none w-24 block text-sm leading-6 text-gray-500">Format</label>
+      <label for="format" class="flex-none w-[112px] block text-sm leading-6 text-gray-500">Format</label>
       <select
         id="format"
         v-model="format"
@@ -109,7 +140,7 @@ const getFileCountText = () => {
     </div>
 
     <div class="flex items-center mb-4">
-      <label for="compression" class="flex-none w-24 block text-sm leading-6 text-gray-500">Compression</label>
+      <label for="compression" class="flex-none w-[112px] block text-sm leading-6 text-gray-500">Compression</label>
       <select
         id="compression"
         v-model="compressionLevel"
@@ -117,13 +148,13 @@ const getFileCountText = () => {
       >
         <option value="none">None</option>
         <option value="light">Light</option>
-        <option value="normal">Normal</option>
+        <option value="medium">Medium</option>
         <option value="extreme">Extreme</option>
       </select>
     </div>
 
     <div class="flex items-center mb-4">
-      <label for="scale" class="flex-none w-24 block text-sm leading-6 text-gray-500">Scale</label>
+      <label for="scale" class="flex-none w-[112px] block text-sm leading-6 text-gray-500">Scale</label>
       <select
         id="scale"
         v-model="exportScale"
@@ -135,6 +166,28 @@ const getFileCountText = () => {
         <option value="4x">4x</option>
       </select>
     </div>
+
+    <SwitchGroup as="div" class="flex items-center justify-between mb-5">
+      <span class="flex flex-grow flex-col">
+        <SwitchLabel as="span" class="text-sm text-gray-500" passive>Append Suffix</SwitchLabel>
+        <!-- <SwitchDescription as="span" class="text-sm text-gray-500"> {{ getFileNameExample() }} </SwitchDescription> -->
+      </span>
+      <Switch
+        v-model="enabled"
+        :class="[
+          enabled ? 'bg-blue-500' : 'bg-gray-200',
+          'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out'
+        ]"
+      >
+        <span
+          aria-hidden="true"
+          :class="[
+            enabled ? 'translate-x-5' : 'translate-x-0',
+            'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out'
+          ]"
+        />
+      </Switch>
+    </SwitchGroup>
 
     <button
       @click="exportElements"
@@ -150,17 +203,22 @@ const getFileCountText = () => {
     <div class="mt-4">
       <div v-if="selectedCount === 0" class="text-sm text-gray-500">Please select images to export</div>
 
-      <div v-if="selectedCount > 0 && originalSize > 0" class="text-sm text-gray-950">
-        <p class="mb-2">{{ getFileCountText() }}</p>
-        <p>
+      <div v-if="selectedCount > 0 && originalSize > 0">
+        <p class="text-sm text-gray-500 mb-1">{{ getFileCountText() }}</p>
+        <p class="text-[13px]/[18px] text-gray-500">
           {{ formatSize(originalSize) }}
-          <span class="mx-1">---></span>
+          <span class="mx-1">→</span>
           {{ formatSize(compressedSize) }},
-          <span class="ml-1" :class="Number(compressionRatio()) > 0 ? 'text-green-600' : 'text-gray-600'">
+          <span class="ml-1" :class="Number(compressionRatio()) > 0 ? 'text-green-600' : 'text-gray-500'">
             {{ Number(compressionRatio()) > 0 ? '-' : '' }}{{ compressionRatio() }}%
           </span>
         </p>
       </div>
+    </div>
+
+    <!-- 在 template 中添加错误提示组件 -->
+    <div v-if="showError" class="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">
+      <span class="block sm:inline">{{ errorMessage }}</span>
     </div>
   </div>
 </template>

@@ -2,7 +2,7 @@
 
 figma.showUI(__html__)
 
-figma.ui.resize(300, 300)
+figma.ui.resize(300, 328)
 
 // 新增：发送初始选中状态
 figma.ui.postMessage({
@@ -47,7 +47,7 @@ figma.ui.onmessage = async (msg) => {
           const buffer = await node.exportAsync(settings)
           files.push({
             buffer: buffer,
-            fileName: `${node.name}${msg.exportScale !== '1x' ? '_' + msg.exportScale : ''}.${msg.format.toLowerCase()}`,
+            fileName: `${node.name}.${msg.format.toLowerCase()}`,
             format: msg.format.toLowerCase(),
             scale: msg.exportScale
           })
