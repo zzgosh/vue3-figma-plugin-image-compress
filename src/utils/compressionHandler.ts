@@ -23,12 +23,13 @@ export const compressionHandler = async (
 
   const originalSize = blob.size
   const isJPEG = format.toLowerCase() === 'jpeg' || format.toLowerCase() === 'jpg'
+  const isWebP = format.toLowerCase() === 'webp'
   let originalImage: ImageBitmap | null = null
   let compressedFile: File | null = null
 
   try {
     // 获取压缩配置选项
-    const options = await getCompressionOptions(compressionLevel, originalSize, isJPEG)
+    const options = await getCompressionOptions(compressionLevel, originalSize, isJPEG, format)
 
     // 将 Blob 转换为 File 对象
     const blobFile = new File([blob], originalFileName, { type: blob.type })
@@ -90,9 +91,9 @@ export const compressionHandler = async (
   }
 }
 
-const getCompressionOptions = async (level: string, originalSize: number, isJPEG: boolean) => {
+const getCompressionOptions = async (level: string, originalSize: number, isJPEG: boolean, format: string) => {
+  // WebP 和 PNG 共用优化策略
   if (!isJPEG) {
-    // PNG 优化策略
     let quality: number
     switch (level) {
       case 'light':
@@ -113,7 +114,7 @@ const getCompressionOptions = async (level: string, originalSize: number, isJPEG
       maxWidthOrHeight: Infinity,
       initialQuality: quality,
       alwaysKeepResolution: true,
-      fileType: 'image/png'
+      fileType: format.toLowerCase() === 'webp' ? 'image/webp' : 'image/png'
     }
   }
 

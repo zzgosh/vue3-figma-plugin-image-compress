@@ -142,6 +142,7 @@ const getFileCountText = () => {
       >
         <option value="PNG">PNG</option>
         <option value="JPG">JPG</option>
+        <option value="WEBP">WebP</option>
       </select>
     </div>
 
