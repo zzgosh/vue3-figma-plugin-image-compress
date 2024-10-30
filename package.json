@@ -1,9 +1,9 @@
 {
   "name": "vue3-figma-plugin-starter",
   "version": "0.1.0",
-  "author": "Wendy Gao <wendygaoyuan@163.com>",
+  "author": "Jeejee Guan <jjkwanhere@gmail.com>",
   "license": "MIT",
-  "repository": "https://github.com/wendygaoyuan/vue3-figma-plugin-starter.git",
+  "repository": "https://github.com/jeejeeguan/vue3-figma-plugin-image-compress.git",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
