@@ -5,12 +5,15 @@
 ## 功能特点
 
 - 支持批量导出并压缩图片
-- 支持 JPG 和 PNG 格式
-- 提供多种压缩级别选择(不压缩/轻微/普通/极致)
+- 支持 JPG、PNG 和 WebP 格式
+- 提供多种压缩级别选择(None/Light/Medium/Extreme)
 - 支持多种导出比例(1x/2x/3x/4x)
-- 实时显示压缩前后的文件大小对比
-- 自动打包为 ZIP 文件(当选择多个图片时)
-- 支持导出文件名后缀切换
+- 显示压缩前后的文件大小对比
+- 显示压缩处理时间
+- 对多文件打包为 ZIP 导出
+- 支持导出文件名是否添加后缀的设置
+- 智能压缩策略（根据图片大小自动调整）
+- 支持多线程并行压缩处理
 
 ## 技术实现
 
@@ -22,14 +25,16 @@
 - [TypeScript](https://www.typescriptlang.org/): 类型安全的 JavaScript 超集
 - [Vite](https://vitejs.dev/): 现代前端开发与构建工具
 - [TailwindCSS](https://tailwindcss.com/): 实用优先的 CSS 框架
+- [p-limit](https://www.npmjs.com/package/p-limit): 用于控制并发压缩任务数量
 
 ### 压缩原理
 
-1. 根据图片格式(JPG/PNG)和压缩级别选择不同的压缩策略
+1. 针对不同格式(JPG/PNG/WebP)采用差异化压缩策略
 2. 通过 browser-image-compression 库进行压缩处理
 3. 保持原始分辨率,仅优化文件大小
-4. 如果压缩后体积反而增大,则保留原始文件
-5. 多文件导出时自动打包为 ZIP
+4. 智能判断压缩效果，当压缩后体积增大时保留原文件
+5. 使用 Web Worker 实现多线程压缩
+6. 使用 p-limit 控制并发压缩数量
 
 ## 本地开发
 
@@ -69,9 +74,10 @@ npm run watch
 │   ├── style.css         # 全局样式
 │   ├── env.d.ts          # 类型声明
 │   └── utils/            # 工具函数
-│       ├── fileHandler.ts        # 文件处理
-│       ├── compressionHandler.ts # 压缩逻辑
-│       └── zipHandler.ts         # ZIP 打包处理
+│       ├── fileHandler.ts        # 文件处理与下载
+│       ├── compressionHandler.ts # 图片压缩核心逻辑
+│       ├── zipHandler.ts         # ZIP 打包处理
+│       └── constants.ts          # 常量和类型定义
 │
 ├── figma/                 # Figma 相关代码
 │   └── code.ts           # Figma 插件主逻辑
