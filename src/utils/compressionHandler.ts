@@ -92,21 +92,40 @@ export const compressionHandler = async (
 }
 
 const getCompressionOptions = async (level: string, originalSize: number, isJPEG: boolean, format: string) => {
-  // WebP 和 PNG 共用优化策略
+  // WebP 和 PNG 使用不同的优化策略
   if (!isJPEG) {
     let quality: number
-    switch (level) {
-      case 'light':
-        quality = 0.9
-        break
-      case 'medium':
-        quality = 0.8
-        break
-      case 'extreme':
-        quality = 0.7
-        break
-      default:
-        quality = 0.8
+
+    if (format.toLowerCase() === 'webp') {
+      // WebP 格式压缩策略
+      switch (level) {
+        case 'light':
+          quality = 0.85
+          break
+        case 'medium':
+          quality = 0.75
+          break
+        case 'extreme':
+          quality = 0.65
+          break
+        default:
+          quality = 0.75
+      }
+    } else {
+      // PNG 格式压缩策略
+      switch (level) {
+        case 'light':
+          quality = 0.9
+          break
+        case 'medium':
+          quality = 0.8
+          break
+        case 'extreme':
+          quality = 0.7
+          break
+        default:
+          quality = 0.8
+      }
     }
 
     return {
