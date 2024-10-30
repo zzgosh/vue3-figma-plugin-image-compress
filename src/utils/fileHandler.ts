@@ -15,22 +15,30 @@ export const handleSingleFile = async (
   compressionLevel: CompressionLevel,
   enableSuffix: boolean
 ): Promise<{ originalSize: number; compressedSize: number }> => {
-  let blob = new Blob([file.buffer], { type: `image/${file.format}` })
+  // 如果是 WebP 格式,先用 PNG 导出再转换
+  const initialFormat = file.format === 'webp' ? 'png' : file.format
+  let blob = new Blob([file.buffer], { type: `image/${initialFormat}` })
   const originalSize = blob.size
 
   // 先处理基本文件名（包含缩放后缀）
   const baseName = file.fileName.split('.')[0]
   const scaleStr = enableSuffix ? `_${file.scale}` : ''
   const extension = `.${file.format.toLowerCase()}`
-  const baseFileName = `${baseName}${scaleStr}${extension}` // 包含缩放后缀的基本文件名
+  const baseFileName = `${baseName}${scaleStr}${extension}`
 
   if (compressionLevel !== 'none') {
-    // 传入包含缩放后缀的文件名，而不是原始文件名
     const result = await compressionHandler(blob, file.format, compressionLevel, baseFileName, enableSuffix)
     blob = result.blob
     downloadFile(blob, result.fileName)
     return { originalSize, compressedSize: result.compressedSize }
   } else {
+    if (file.format === 'webp') {
+      // 即使不压缩也需要转换格式
+      const result = await compressionHandler(blob, 'webp', 'light', baseFileName, enableSuffix)
+      blob = result.blob
+      downloadFile(blob, result.fileName)
+      return { originalSize, compressedSize: result.blob.size }
+    }
     downloadFile(blob, baseFileName)
     return { originalSize, compressedSize: originalSize }
   }

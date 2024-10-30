@@ -23,12 +23,13 @@ export const compressionHandler = async (
 
   const originalSize = blob.size
   const isJPEG = format.toLowerCase() === 'jpeg' || format.toLowerCase() === 'jpg'
+  const isWebP = format.toLowerCase() === 'webp'
   let originalImage: ImageBitmap | null = null
   let compressedFile: File | null = null
 
   try {
     // 获取压缩配置选项
-    const options = await getCompressionOptions(compressionLevel, originalSize, isJPEG)
+    const options = await getCompressionOptions(compressionLevel, originalSize, isJPEG, format)
 
     // 将 Blob 转换为 File 对象
     const blobFile = new File([blob], originalFileName, { type: blob.type })
@@ -90,22 +91,41 @@ export const compressionHandler = async (
   }
 }
 
-const getCompressionOptions = async (level: string, originalSize: number, isJPEG: boolean) => {
+const getCompressionOptions = async (level: string, originalSize: number, isJPEG: boolean, format: string) => {
+  // WebP 和 PNG 使用不同的优化策略
   if (!isJPEG) {
-    // PNG 优化策略
     let quality: number
-    switch (level) {
-      case 'light':
-        quality = 0.9
-        break
-      case 'medium':
-        quality = 0.8
-        break
-      case 'extreme':
-        quality = 0.7
-        break
-      default:
-        quality = 0.8
+
+    if (format.toLowerCase() === 'webp') {
+      // WebP 格式压缩策略
+      switch (level) {
+        case 'light':
+          quality = 0.85
+          break
+        case 'medium':
+          quality = 0.75
+          break
+        case 'extreme':
+          quality = 0.65
+          break
+        default:
+          quality = 0.75
+      }
+    } else {
+      // PNG 格式压缩策略
+      switch (level) {
+        case 'light':
+          quality = 0.9
+          break
+        case 'medium':
+          quality = 0.8
+          break
+        case 'extreme':
+          quality = 0.7
+          break
+        default:
+          quality = 0.8
+      }
     }
 
     return {
@@ -113,7 +133,7 @@ const getCompressionOptions = async (level: string, originalSize: number, isJPEG
       maxWidthOrHeight: Infinity,
       initialQuality: quality,
       alwaysKeepResolution: true,
-      fileType: 'image/png'
+      fileType: format.toLowerCase() === 'webp' ? 'image/webp' : 'image/png'
     }
   }
 

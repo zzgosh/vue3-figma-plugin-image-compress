@@ -40,7 +40,7 @@ figma.ui.onmessage = async (msg) => {
       if ('exportAsync' in node) {
         try {
           const settings = {
-            format: msg.format.toUpperCase(),
+            format: msg.format === 'WEBP' ? 'PNG' : msg.format.toUpperCase(),
             constraint: { type: 'SCALE', value: parseInt(msg.exportScale) }
           }
 
