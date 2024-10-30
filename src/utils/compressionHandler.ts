@@ -91,83 +91,82 @@ export const compressionHandler = async (
 }
 
 const getCompressionOptions = async (level: string, originalSize: number, isJPEG: boolean) => {
+  if (!isJPEG) {
+    // PNG 优化策略
+    let quality: number
+    switch (level) {
+      case 'light':
+        quality = 0.9
+        break
+      case 'medium':
+        quality = 0.8
+        break
+      case 'extreme':
+        quality = 0.7
+        break
+      default:
+        quality = 0.8
+    }
+
+    return {
+      useWebWorker: true,
+      maxWidthOrHeight: Infinity,
+      initialQuality: quality,
+      alwaysKeepResolution: true,
+      fileType: 'image/png'
+    }
+  }
+
+  // JPEG 处理逻辑
   const sizeMB = originalSize / (1024 * 1024)
   let quality: number
   let targetSizeMB: number
 
-  // 更新压缩参数策略
-  const getTargetParams = (size: number, isJPEG: boolean): { quality: number; ratio: number } => {
-    if (isJPEG) {
-      // JPEG 使用更保守的压缩策略
-      if (size < 0.01) return { quality: 0.95, ratio: 0.95 } // <10KB
-      if (size < 0.05) return { quality: 0.92, ratio: 0.9 } // 10-50KB
-      if (size < 0.1) return { quality: 0.9, ratio: 0.85 } // 50-100KB
-      if (size < 0.3) return { quality: 0.88, ratio: 0.8 } // 100-300KB
-      if (size < 0.5) return { quality: 0.85, ratio: 0.75 } // 300-500KB
-      if (size < 1.0) return { quality: 0.82, ratio: 0.7 } // 500KB-1MB
-      if (size < 2.0) return { quality: 0.8, ratio: 0.65 } // 1-2MB
-      return { quality: 0.7, ratio: 0.6 } // >2MB
-    } else {
-      // PNG 使用更合理的压缩策略
-      if (size < 0.01) return { quality: 0.95, ratio: 0.9 } // <10KB
-      if (size < 0.05) return { quality: 0.9, ratio: 0.85 } // 10-50KB
-      if (size < 0.1) return { quality: 0.85, ratio: 0.8 } // 50-100KB
-      if (size < 0.3) return { quality: 0.8, ratio: 0.75 } // 100-300KB
-      if (size < 0.5) return { quality: 0.75, ratio: 0.7 } // 300-500KB
-      if (size < 1.0) return { quality: 0.7, ratio: 0.65 } // 500KB-1MB
-      if (size < 2.0) return { quality: 0.65, ratio: 0.6 } // 1-2MB
-      return { quality: 0.6, ratio: 0.55 } // >2MB
-    }
+  if (sizeMB < 0.01) {
+    quality = 0.95
+    targetSizeMB = sizeMB * 0.95
+  } else if (sizeMB < 0.05) {
+    quality = 0.92
+    targetSizeMB = sizeMB * 0.9
+  } else if (sizeMB < 0.1) {
+    quality = 0.9
+    targetSizeMB = sizeMB * 0.85
+  } else if (sizeMB < 0.3) {
+    quality = 0.88
+    targetSizeMB = sizeMB * 0.8
+  } else if (sizeMB < 0.5) {
+    quality = 0.85
+    targetSizeMB = sizeMB * 0.75
+  } else if (sizeMB < 1.0) {
+    quality = 0.82
+    targetSizeMB = sizeMB * 0.7
+  } else if (sizeMB < 2.0) {
+    quality = 0.8
+    targetSizeMB = sizeMB * 0.65
+  } else {
+    quality = 0.7
+    targetSizeMB = sizeMB * 0.6
   }
 
-  const baseParams = getTargetParams(sizeMB, isJPEG)
-
-  if (isJPEG) {
-    switch (level) {
-      case 'light':
-        quality = baseParams.quality + 0.05
-        targetSizeMB = sizeMB * (baseParams.ratio + 0.15)
-        break
-      case 'medium':
-        quality = baseParams.quality
-        targetSizeMB = sizeMB * baseParams.ratio
-        break
-      case 'extreme':
-        quality = baseParams.quality - 0.1
-        targetSizeMB = sizeMB * (baseParams.ratio - 0.1)
-        break
-      default:
-        quality = 0.8
-        targetSizeMB = sizeMB * 0.7
-    }
-  } else {
-    // PNG 更合理的压缩策略
-    switch (level) {
-      case 'light':
-        quality = baseParams.quality - 0.2
-        targetSizeMB = sizeMB * (baseParams.ratio - 0.1)
-        break
-      case 'medium':
-        quality = baseParams.quality - 0.3
-        targetSizeMB = sizeMB * (baseParams.ratio - 0.2)
-        break
-      case 'extreme':
-        quality = baseParams.quality - 0.4
-        targetSizeMB = sizeMB * (baseParams.ratio - 0.3)
-        break
-      default:
-        quality = 0.3
-        targetSizeMB = sizeMB * 0.25
-    }
+  // 根据压缩级别调整
+  switch (level) {
+    case 'light':
+      quality += 0.05
+      targetSizeMB *= 1.15
+      break
+    case 'extreme':
+      quality -= 0.1
+      targetSizeMB *= 0.9
+      break
   }
 
   return {
     maxSizeMB: targetSizeMB,
     useWebWorker: true,
-    maxWidthOrHeight: Infinity, // 实际值会在 compressionHandler 中设置
+    maxWidthOrHeight: Infinity,
     initialQuality: quality,
     alwaysKeepResolution: true,
-    fileType: isJPEG ? 'image/jpeg' : undefined,
-    exifOrientation: isJPEG ? 2 : undefined
+    fileType: 'image/jpeg',
+    exifOrientation: 2
   }
 }
