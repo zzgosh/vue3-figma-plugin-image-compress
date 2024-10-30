@@ -4,7 +4,7 @@ import { handleSingleFile, handleMultipleFiles } from './utils/fileHandler'
 import { Switch, SwitchDescription, SwitchGroup, SwitchLabel } from '@headlessui/vue'
 import { compressionSuffixMap, type CompressionLevel } from './utils/constants'
 
-const format = ref('JPG') // 修改默认值为 JPG
+const format = ref('PNG') // 修改默认值为 JPG
 const compressionLevel = ref<CompressionLevel>('medium')
 const exportScale = ref('1x') // 修改默认值为 1x
 const originalSize = ref(0)
@@ -18,6 +18,9 @@ const compressedElementIds = ref<string[]>([])
 
 const errorMessage = ref('')
 const showError = ref(false)
+
+const compressionTime = ref(0)
+const compressionStartTime = ref(0)
 
 const showErrorMessage = (message: string) => {
   errorMessage.value = message
@@ -54,17 +57,19 @@ onMounted(() => {
     const msg = event.data.pluginMessage
     if (msg.type === 'download') {
       try {
+        compressionStartTime.value = Date.now() // 开始计时
         let result
         if (msg.files.length === 1) {
           result = await handleSingleFile(msg.files[0], compressionLevel.value as CompressionLevel, enabled.value)
         } else {
           result = await handleMultipleFiles(msg.files, compressionLevel.value as CompressionLevel)
         }
+        compressionTime.value = (Date.now() - compressionStartTime.value) / 1000 // 计算耗时
+
         originalSize.value = result.originalSize
         compressedSize.value = result.compressedSize
         compressedElementIds.value = msg.elementIds
 
-        // 通知 Figma 插件处理完成
         parent.postMessage({ pluginMessage: { type: 'export-complete' } }, '*')
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '未知错误'
@@ -83,6 +88,7 @@ onMounted(() => {
         // 重置压缩数据
         originalSize.value = 0
         compressedSize.value = 0
+        compressionTime.value = 0 // 重置时间
       }
     }
   }
@@ -207,17 +213,17 @@ const getFileCountText = () => {
         <p class="text-sm text-gray-500 mb-1">{{ getFileCountText() }}</p>
         <p class="text-[13px]/[18px] text-gray-500">
           {{ formatSize(originalSize) }}
-          <span class="mx-1">→</span>
+          <span class="mx-[2px]">→</span>
           {{ formatSize(compressedSize) }},
-          <span class="ml-1" :class="Number(compressionRatio()) > 0 ? 'text-green-600' : 'text-gray-500'">
-            {{ Number(compressionRatio()) > 0 ? '-' : '' }}{{ compressionRatio() }}%
-          </span>
+          <span class="ml-[2px]" :class="Number(compressionRatio()) > 0 ? 'text-green-600' : 'text-gray-500'"
+            >{{ Number(compressionRatio()) > 0 ? '-' : '' }}{{ compressionRatio() }}%</span
+          ><span class="text-gray-500" v-if="compressionTime > 0">, {{ compressionTime.toFixed(1) }}s</span>
         </p>
       </div>
     </div>
 
     <!-- 在 template 中添加错误提示组件 -->
-    <div v-if="showError" class="fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded" role="alert">
+    <div v-if="showError" class="fixed top-4 right-4 bg-red-100 border border-red-400 text-orange-600 px-4 py-3 rounded" role="alert">
       <span class="block sm:inline">{{ errorMessage }}</span>
     </div>
   </div>
