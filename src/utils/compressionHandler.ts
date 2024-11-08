@@ -65,8 +65,20 @@ export const compressionHandler = async (
     }
 
     // 生成文件名
+    const getBaseNameAndExtension = (fileName: string) => {
+      const lastDotIndex = fileName.lastIndexOf('.')
+      if (lastDotIndex === -1) {
+        return { baseName: fileName, extension: '' }
+      }
+      return {
+        baseName: fileName.substring(0, lastDotIndex),
+        extension: fileName.substring(lastDotIndex)
+      }
+    }
+
+    const { baseName } = getBaseNameAndExtension(originalFileName)
     const compressionSuffix = compressionLevel !== 'none' && enableSuffix ? `${compressionSuffixMap[compressionLevel]}_compressed` : ''
-    const fileName = `${originalFileName.split('.')[0]}${compressionSuffix}.${format}`
+    const fileName = `${baseName}${compressionSuffix}.${format}`
 
     return {
       blob: compressedBlob,
