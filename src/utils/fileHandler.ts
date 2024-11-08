@@ -10,6 +10,18 @@ interface FileData {
   scale: string
 }
 
+// 修改文件名处理逻辑
+const getBaseNameAndExtension = (fileName: string) => {
+  const lastDotIndex = fileName.lastIndexOf('.')
+  if (lastDotIndex === -1) {
+    return { baseName: fileName, extension: '' }
+  }
+  return {
+    baseName: fileName.substring(0, lastDotIndex),
+    extension: fileName.substring(lastDotIndex)
+  }
+}
+
 export const handleSingleFile = async (
   file: FileData,
   compressionLevel: CompressionLevel,
@@ -21,25 +33,24 @@ export const handleSingleFile = async (
   const originalSize = blob.size
 
   // 先处理基本文件名（包含缩放后缀）
-  const baseName = file.fileName.split('.')[0]
+  const { baseName, extension } = getBaseNameAndExtension(file.fileName)
   const scaleStr = enableSuffix ? `_${file.scale}` : ''
-  const extension = `.${file.format.toLowerCase()}`
-  const baseFileName = `${baseName}${scaleStr}${extension}`
+  const finalFileName = `${baseName}${scaleStr}${extension}`
 
   if (compressionLevel !== 'none') {
-    const result = await compressionHandler(blob, file.format, compressionLevel, baseFileName, enableSuffix)
+    const result = await compressionHandler(blob, file.format, compressionLevel, finalFileName, enableSuffix)
     blob = result.blob
     downloadFile(blob, result.fileName)
     return { originalSize, compressedSize: result.compressedSize }
   } else {
     if (file.format === 'webp') {
       // 即使不压缩也需要转换格式
-      const result = await compressionHandler(blob, 'webp', 'light', baseFileName, enableSuffix)
+      const result = await compressionHandler(blob, 'webp', 'light', finalFileName, enableSuffix)
       blob = result.blob
       downloadFile(blob, result.fileName)
       return { originalSize, compressedSize: result.blob.size }
     }
-    downloadFile(blob, baseFileName)
+    downloadFile(blob, finalFileName)
     return { originalSize, compressedSize: originalSize }
   }
 }
@@ -57,22 +68,21 @@ export const handleMultipleFiles = async (
       limit(async () => {
         let blob = new Blob([file.buffer], { type: `image/${file.format}` })
         // 先处理基本文件名（包含缩放后缀）
-        const baseName = file.fileName.split('.')[0]
+        const { baseName, extension } = getBaseNameAndExtension(file.fileName)
         const scaleStr = `_${file.scale}` // 多文件时总是添加缩放后缀
-        const extension = `.${file.format.toLowerCase()}`
-        const baseFileName = `${baseName}${scaleStr}${extension}`
-        let fileName = baseFileName
+        const finalFileName = `${baseName}${scaleStr}${extension}`
+        let fileName = finalFileName
 
         totalOriginalSize += blob.size
 
         if (compressionLevel !== 'none') {
-          const result = await compressionHandler(blob, file.format, compressionLevel, baseFileName, true)
+          const result = await compressionHandler(blob, file.format, compressionLevel, finalFileName, true)
           blob = result.blob
           fileName = result.fileName
           totalCompressedSize += result.compressedSize
         } else {
           totalCompressedSize += blob.size
-          fileName = baseFileName
+          fileName = finalFileName
         }
 
         return { blob, fileName }
