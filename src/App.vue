@@ -62,7 +62,7 @@ onMounted(() => {
         if (msg.files.length === 1) {
           result = await handleSingleFile(msg.files[0], compressionLevel.value as CompressionLevel, enabled.value)
         } else {
-          result = await handleMultipleFiles(msg.files, compressionLevel.value as CompressionLevel)
+          result = await handleMultipleFiles(msg.files, compressionLevel.value as CompressionLevel, enabled.value)
         }
         compressionTime.value = (Date.now() - compressionStartTime.value) / 1000 // 计算耗时
 

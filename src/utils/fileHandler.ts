@@ -57,7 +57,8 @@ export const handleSingleFile = async (
 
 export const handleMultipleFiles = async (
   files: FileData[],
-  compressionLevel: CompressionLevel
+  compressionLevel: CompressionLevel,
+  enableSuffix: boolean
 ): Promise<{ originalSize: number; compressedSize: number }> => {
   const limit = pLimit(3) // 限制同时处理3个文件
   let totalOriginalSize = 0
@@ -69,14 +70,14 @@ export const handleMultipleFiles = async (
         let blob = new Blob([file.buffer], { type: `image/${file.format}` })
         // 先处理基本文件名（包含缩放后缀）
         const { baseName, extension } = getBaseNameAndExtension(file.fileName)
-        const scaleStr = `_${file.scale}` // 多文件时总是添加缩放后缀
+        const scaleStr = enableSuffix ? `_${file.scale}` : ''
         const finalFileName = `${baseName}${scaleStr}${extension}`
         let fileName = finalFileName
 
         totalOriginalSize += blob.size
 
         if (compressionLevel !== 'none') {
-          const result = await compressionHandler(blob, file.format, compressionLevel, finalFileName, true)
+          const result = await compressionHandler(blob, file.format, compressionLevel, finalFileName, enableSuffix)
           blob = result.blob
           fileName = result.fileName
           totalCompressedSize += result.compressedSize
