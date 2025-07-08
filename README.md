@@ -7,7 +7,7 @@
 - 支持批量导出并压缩图片
 - 支持 JPG、PNG 和 WebP 格式
 - 提供多种压缩级别选择(None/Light/Medium/Extreme)
-- 支持多种导出比例(1x/2x/3x/4x)
+- 支持多种导出比例(0.5x/1x/2x/3x/4x/6x/8x)
 - 显示压缩前后的文件大小对比
 - 显示压缩处理时间
 - 对多文件打包为 ZIP 导出
@@ -48,22 +48,26 @@ npm install
 
 ### 开发调试
 
-1. 启动开发服务器:
+1. 构建插件:
 
 ```bash
-npm run dev
+npm run build
+# 或使用监视模式（推荐）
+npm run watch
 ```
 
-2. 在 Figma 中测试:
+2. 在 Figma 中加载插件:
 
 - 打开 Figma 桌面应用
 - 进入插件菜单 -> 开发 -> 新建插件
-- 选择 manifest.json 文件位置(位于 public/manifest.json)
-- 运行以下命令监视文件变化:
+- 选择 manifest.json 文件位置：**选择 `dist/manifest.json`**（注意：不是 public/manifest.json）
+- 插件将出现在开发菜单中
 
-```bash
-npm run watch
-```
+3. 开发提示:
+
+- 使用 `npm run watch` 可以自动监视文件变化并重新构建
+- 修改代码后，在 Figma 中重新运行插件即可看到更新
+- `public/manifest.json` 是源文件，构建后会复制到 `dist/` 目录
 
 ### 项目结构
 
