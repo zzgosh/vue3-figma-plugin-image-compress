@@ -4,17 +4,11 @@
 
 Add more export scale options (0.5x, 6x, 8x)
 
-- Add new export scales: 0.5x, 6x, 8x to existing 1x-4x options
-- Update Figma plugin to support decimal scales with parseFloat
-- Increase UI height to accommodate more options
-- Update README with correct development instructions and new scales
+- Add new export scales: 0.5x, 6x, 8x to existing options
 
 新增更多导出缩放选项：
 
 - 新增 0.5x、6x、8x 导出缩放选项
-- 更新 Figma 插件以支持小数缩放
-- 增加 UI 高度以容纳更多选项
-- 更新 README 文档
 
 ## Version 7 on 2024 年 12 月 10 日
 
