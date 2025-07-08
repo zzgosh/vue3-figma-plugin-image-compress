@@ -167,10 +167,13 @@ const getFileCountText = () => {
         v-model="exportScale"
         class="flex-1 block rounded-md border-0 py-1.5 pl-3 pr-10 text-sm text-gray-950 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
       >
+        <option value="0.5x">0.5x</option>
         <option value="1x">1x</option>
         <option value="2x">2x</option>
         <option value="3x">3x</option>
         <option value="4x">4x</option>
+        <option value="6x">6x</option>
+        <option value="8x">8x</option>
       </select>
     </div>
 

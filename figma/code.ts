@@ -2,7 +2,7 @@
 
 figma.showUI(__html__)
 
-figma.ui.resize(300, 328)
+figma.ui.resize(300, 340)
 
 // 新增：发送初始选中状态
 figma.ui.postMessage({
@@ -41,7 +41,7 @@ figma.ui.onmessage = async (msg) => {
         try {
           const settings = {
             format: msg.format === 'WEBP' ? 'PNG' : msg.format.toUpperCase(),
-            constraint: { type: 'SCALE', value: parseInt(msg.exportScale) }
+            constraint: { type: 'SCALE', value: parseFloat(msg.exportScale) }
           }
 
           const buffer = await node.exportAsync(settings)
