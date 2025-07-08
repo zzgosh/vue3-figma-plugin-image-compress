@@ -86,6 +86,10 @@ npm run watch
 ├── figma/                 # Figma 相关代码
 │   └── code.ts           # Figma 插件主逻辑
 │
+├── figma-plugin-changelog/  # 插件发布相关文件
+│   ├── ABOUT.md          # 插件介绍页面内容
+│   └── VERSION_HISTORY.md # 版本历史记录
+│
 ├── public/               # 静态资源
 │   ├── manifest.json     # Figma 插件配置
 │   └── favicon.ico       # 网站图标
@@ -102,6 +106,15 @@ npm run watch
 ```bash
 npm run build
 ```
+
+## 插件发布管理
+
+`figma-plugin-changelog/` 目录包含了插件发布时需要的内容：
+
+- `ABOUT.md`: 插件介绍页面内容（中英文版本），包含功能特点和使用说明
+- `VERSION_HISTORY.md`: 版本历史记录，记录每个版本的更新内容
+
+发布插件到 Figma 社区时，可以直接复制这些文件内容到对应的页面。
 
 ## 贡献
 

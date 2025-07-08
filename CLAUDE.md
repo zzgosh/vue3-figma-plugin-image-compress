@@ -53,3 +53,11 @@ npm run preview
 3. **并发控制**：图片压缩使用 p-limit 限制并发数为 3
 4. **错误处理**：使用自定义 CompressionError 类，UI 显示错误提示
 5. **文件命名**：遵循现有的后缀系统（_l/_m/_x 表示压缩级别，@2x/@3x/@4x 表示缩放）
+
+## 插件发布管理
+
+`figma-plugin-changelog/` 目录用于管理 Figma 插件发布时的相关内容：
+- `ABOUT.md`: 插件介绍页面内容（中英文版本）
+- `VERSION_HISTORY.md`: 版本历史记录
+
+发布插件时，可以直接复制这些文件内容到 Figma 插件管理页面。
