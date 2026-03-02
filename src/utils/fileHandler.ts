@@ -45,7 +45,7 @@ export const handleSingleFile = async (
   } else {
     if (file.format === 'webp') {
       // 即使不压缩也需要转换格式
-      const result = await compressionHandler(blob, 'webp', 'light', finalFileName, enableSuffix)
+      const result = await compressionHandler(blob, 'webp', 'none', finalFileName, enableSuffix)
       blob = result.blob
       downloadFile(blob, result.fileName)
       return { originalSize, compressedSize: result.blob.size }
@@ -67,7 +67,8 @@ export const handleMultipleFiles = async (
   const processedFiles = await Promise.all(
     files.map((file) =>
       limit(async () => {
-        let blob = new Blob([file.buffer], { type: `image/${file.format}` })
+        const initialFormat = file.format === 'webp' ? 'png' : file.format
+        let blob = new Blob([file.buffer], { type: `image/${initialFormat}` })
         // 先处理基本文件名（包含缩放后缀）
         const { baseName, extension } = getBaseNameAndExtension(file.fileName)
         const scaleStr = enableSuffix ? `_${file.scale}` : ''
@@ -82,8 +83,15 @@ export const handleMultipleFiles = async (
           fileName = result.fileName
           totalCompressedSize += result.compressedSize
         } else {
-          totalCompressedSize += blob.size
-          fileName = finalFileName
+          if (file.format === 'webp') {
+            const result = await compressionHandler(blob, 'webp', 'none', finalFileName, enableSuffix)
+            blob = result.blob
+            fileName = result.fileName
+            totalCompressedSize += result.compressedSize
+          } else {
+            totalCompressedSize += blob.size
+            fileName = finalFileName
+          }
         }
 
         return { blob, fileName }
