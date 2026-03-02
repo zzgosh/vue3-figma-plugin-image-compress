@@ -49,13 +49,18 @@ export const compressionHandler = async (
       throw new CompressionError(`Compression failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
 
+    const compressedBuffer = await compressedFile.arrayBuffer()
+    if (isWebP && !isWebPBuffer(compressedBuffer)) {
+      throw new CompressionError('WebP encoding failed: current runtime does not produce valid WebP bytes')
+    }
+
     // 转换为指定格式的 Blob
-    const compressedBlob = new Blob([await compressedFile.arrayBuffer()], {
+    const compressedBlob = new Blob([compressedBuffer], {
       type: `image/${format}`
     })
 
     // 压缩效果验证
-    if (compressedBlob.size > originalSize) {
+    if (!isWebP && compressedBlob.size > originalSize) {
       console.warn('Compressed size is larger than original, returning original file')
       return {
         blob: blob,
@@ -103,6 +108,22 @@ export const compressionHandler = async (
   }
 }
 
+const isWebPBuffer = (buffer: ArrayBuffer): boolean => {
+  const bytes = new Uint8Array(buffer)
+  if (bytes.length < 12) return false
+
+  return (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  )
+}
+
 const getCompressionOptions = async (level: string, originalSize: number, isJPEG: boolean, format: string) => {
   // WebP 和 PNG 使用不同的优化策略
   if (!isJPEG) {
@@ -111,6 +132,9 @@ const getCompressionOptions = async (level: string, originalSize: number, isJPEG
     if (format.toLowerCase() === 'webp') {
       // WebP 格式压缩策略
       switch (level) {
+        case 'none':
+          quality = 1
+          break
         case 'light':
           quality = 0.85
           break
