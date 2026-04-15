@@ -1,6 +1,7 @@
 {
-  "name": "vue3-figma-plugin-starter",
+  "name": "vue3-figma-plugin-image-compress",
   "version": "0.1.0",
+  "private": true,
   "author": "Zhenzhen Guan <zzgosh92@gmail.com>",
   "license": "GPL-3.0-only",
   "repository": "https://github.com/zzgosh/vue3-figma-plugin-image-compress.git",
