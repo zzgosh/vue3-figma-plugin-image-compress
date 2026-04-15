@@ -4,23 +4,34 @@ figma.showUI(__html__)
 
 figma.ui.resize(300, 340)
 
-// 新增：发送初始选中状态
-figma.ui.postMessage({
-  type: 'selectionChange',
-  count: figma.currentPage.selection.length
-})
+let pendingExportCount: number | null = null
 
-// 新增：监听选中变化
-figma.on('selectionchange', () => {
+const postSelectionChange = () => {
   const selection = figma.currentPage.selection
   figma.ui.postMessage({
     type: 'selectionChange',
     count: selection.length,
-    elementIds: selection.map((node) => node.id) // 添加元素 ID
+    elementIds: selection.map((node) => node.id)
   })
-})
+}
+
+postSelectionChange()
+figma.on('selectionchange', postSelectionChange)
 
 figma.ui.onmessage = async (msg) => {
+  if (msg.type === 'export-complete') {
+    if (pendingExportCount !== null) {
+      figma.notify(`Exported ${pendingExportCount} file${pendingExportCount > 1 ? 's' : ''}`)
+      pendingExportCount = null
+    }
+    return
+  }
+
+  if (msg.type === 'export-failed') {
+    pendingExportCount = null
+    return
+  }
+
   if (msg.type === 'export-elements') {
     const selection = figma.currentPage.selection
     if (selection.length === 0) {
@@ -60,23 +71,12 @@ figma.ui.onmessage = async (msg) => {
       }
     }
 
-    // 发送文件数据到 UI
+    pendingExportCount = files.length
     figma.ui.postMessage({
       type: 'download',
       files: files,
       compressionLevel: msg.compressionLevel,
       elementIds: figma.currentPage.selection.map((node) => node.id)
     })
-
-    // 使用一次性监听器
-    const messageHandler = (response) => {
-      if (response.type === 'export-complete') {
-        figma.notify(`Exported ${files.length} file${files.length > 1 ? 's' : ''}`)
-        // 移除监听器
-        figma.ui.off('message', messageHandler)
-      }
-    }
-
-    figma.ui.on('message', messageHandler)
   }
 }

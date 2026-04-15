@@ -4,16 +4,15 @@ import { handleSingleFile, handleMultipleFiles } from './utils/fileHandler'
 import { Switch, SwitchDescription, SwitchGroup, SwitchLabel } from '@headlessui/vue'
 import { compressionSuffixMap, type CompressionLevel } from './utils/constants'
 
-const format = ref('PNG') // 修改默认值为 JPG
+const format = ref('PNG')
 const compressionLevel = ref<CompressionLevel>('medium')
-const exportScale = ref('1x') // 修改默认值为 1x
+const exportScale = ref('1x')
 const originalSize = ref(0)
 const compressedSize = ref(0)
 const selectedCount = ref(0)
-const isExporting = ref(false) // 新增：跟踪导出状态
+const isExporting = ref(false)
 const enabled = ref<boolean>(false)
 
-// 新增：跟踪已压缩元素的 ID 集合
 const compressedElementIds = ref<string[]>([])
 
 const errorMessage = ref('')
@@ -28,6 +27,11 @@ const showErrorMessage = (message: string) => {
   setTimeout(() => {
     showError.value = false
   }, 3000)
+}
+
+const getElementIds = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return []
+  return value.filter((id): id is string => typeof id === 'string')
 }
 
 const exportElements = async () => {
@@ -54,54 +58,52 @@ const exportElements = async () => {
 
 onMounted(() => {
   window.onmessage = async (event) => {
-    const msg = event.data.pluginMessage
+    const msg = event.data?.pluginMessage
+    if (!msg || typeof msg.type !== 'string') return
+
     if (msg.type === 'download') {
       try {
-        compressionStartTime.value = Date.now() // 开始计时
+        compressionStartTime.value = Date.now()
         let result
         if (msg.files.length === 1) {
           result = await handleSingleFile(msg.files[0], compressionLevel.value as CompressionLevel, enabled.value)
         } else {
           result = await handleMultipleFiles(msg.files, compressionLevel.value as CompressionLevel, enabled.value)
         }
-        compressionTime.value = (Date.now() - compressionStartTime.value) / 1000 // 计算耗时
+        compressionTime.value = (Date.now() - compressionStartTime.value) / 1000
 
         originalSize.value = result.originalSize
         compressedSize.value = result.compressedSize
-        compressedElementIds.value = msg.elementIds
+        compressedElementIds.value = getElementIds(msg.elementIds)
 
         parent.postMessage({ pluginMessage: { type: 'export-complete' } }, '*')
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : '未知错误'
         showErrorMessage(`压缩失败: ${errorMessage}`)
+        parent.postMessage({ pluginMessage: { type: 'export-failed' } }, '*')
       } finally {
         isExporting.value = false
       }
     } else if (msg.type === 'selectionChange') {
-      const currentIds = msg.elementIds // 需要从 Figma 插件传递
-      selectedCount.value = msg.count
-
-      // 比较当前选择的元素是否与上次压缩的元素完全相同
+      const currentIds = getElementIds(msg.elementIds)
+      selectedCount.value = typeof msg.count === 'number' ? msg.count : 0
       const hasSelectionChanged = !areArraysEqual(currentIds, compressedElementIds.value)
 
       if (hasSelectionChanged) {
-        // 重置压缩数据
         originalSize.value = 0
         compressedSize.value = 0
-        compressionTime.value = 0 // 重置时间
+        compressionTime.value = 0
       }
     }
   }
 })
 
-// 辅助函数：比较两个数组是否包含相同的元素（顺序无关）
 const areArraysEqual = (arr1: string[], arr2: string[]) => {
   if (arr1.length !== arr2.length) return false
   const set1 = new Set(arr1)
   return arr2.every((id) => set1.has(id))
 }
 
-// 修改格式化大小的函数
 const formatSize = (size: number) => {
   if (size >= 1024 * 1024) {
     return (size / (1024 * 1024)).toFixed(2) + ' MB'
@@ -109,19 +111,16 @@ const formatSize = (size: number) => {
   return (size / 1024).toFixed(2) + ' KB'
 }
 
-// 修改压缩率计算函数，带百分号返回
 const compressionRatio = () => {
   if (originalSize.value === 0) return '0'
   return ((1 - compressedSize.value / originalSize.value) * 100).toFixed(1)
 }
 
-// 新增：获取文件数量的计算属性
 const getFileCountText = () => {
   const count = selectedCount.value
   return `Compressed ${count} image${count > 1 ? 's' : ''}`
 }
 
-// 新增：获取文件名的示例
 // const getFileNameExample = () => {
 //   const baseName = 'image_example'
 //   const scaleStr = exportScale.value !== '1x' && enabled.value ? `_${exportScale.value}` : ''
