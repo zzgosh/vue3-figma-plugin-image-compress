@@ -1,0 +1,4 @@
+interface:
+  display_name: "Figma Plugin Release"
+  short_description: "Release Figma plugins with GitHub tags"
+  default_prompt: "Use $figma-plugin-release to prepare and run a Figma plugin release."
