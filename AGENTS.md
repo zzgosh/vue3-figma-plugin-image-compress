@@ -23,13 +23,12 @@
 - 当前无自动化测试；提交前至少运行 `npm run build`。
 - 手动验证要点：在 Figma Desktop 中加载 `dist/manifest.json`，验证多格式压缩、并发队列、ZIP 导出、文件名后缀开关等核心路径；在 Watch 模式下修改代码后重新运行插件确认行为。
 
-## Figma 插件发版流程
-- Figma 插件版本使用 `Version N` 表达；对应 Git tag 固定使用 `figma-vN`，例如 `figma-v9`。不要使用普通 `v9`，避免和 npm/package 版本混淆。
-- 用户说“可以发版了”“发版”“发新版”“Figma 插件发版”“插件版本”等指令时，默认把当前开发分支的阶段性成果整理成一个 release PR：先检查未提交/已暂存改动，运行必要验证，补齐 release notes 文件，提交并推送分支，创建 PR，合并到 `main` 后再打 tag。
-- 发版前必须准备并提交 `figma-plugin-changelog/releases/figma-vN.md`，使用英文 + 简体中文的 Markdown 文案。该文件是 GitHub Release notes 和 Figma 插件后台 release notes 的共用来源，也是 `.github/workflows/figma-release.yml` 的必需输入。创建或更新该文件前先阅读 `figma-plugin-changelog/releases/README.md`。
-- `figma-plugin-changelog/releases/figma-vN.md` 必须存在于被 `figma-vN` tag 指向的 commit 中。推荐在 release PR 中同时包含代码变更和该 notes 文件；如果代码已经先合并到 `main`，则再开一个 release-prep PR/commit 添加 notes 文件，合并后把 tag 打在这个包含 notes 的 commit 上。不要在推送 tag 后才本地创建 notes 文件，否则 GitHub Actions 会因为找不到该文件而失败。
-- 发版 tag 必须打在已经合并到 `main` 的 release commit 上。不要在功能分支、未合并 PR、或未确认的临时 commit 上打 `figma-v*` tag。
-- 远端仓库使用 GitHub Rulesets 保护 `main` 和 `staging`（规则集：`Main-Staging Protection`）：禁止删除、禁止 non-fast-forward，变更必须通过 PR；允许 `merge` / `squash` / `rebase`，不要求审批数且无 bypass actors。不要直接 push 到 `main` / `staging`；合并 release PR 时默认使用 `gh pr merge --merge`。
-- 推送 `figma-v*` tag 会触发 `.github/workflows/figma-release.yml`：CI 会运行 `npm ci`、`npm run build`，把 `dist/` 打成 zip，并创建或更新 draft GitHub Release。
-- GitHub Release asset 是归档用构建产物；实际更新 Figma 插件时仍以本地确认过的 `dist/manifest.json` 和 `dist/` 产物为准。
-- Release PR 合并后，Codex 应切换到 `main`，`git pull --ff-only` 同步最新进度，在 `main` 上创建 annotated tag（例如 `git tag -a figma-v9 -m "Small Image Compressor Version 9"`），推送 tag，使用 `gh run watch` 等待 tag 触发的 GitHub Actions 完成，并检查 draft GitHub Release 与构建产物 asset。
+## Figma 插件发版约定
+- 发版相关请求（如“发版”“打 tag”“Figma 插件版本”“插件版本”）优先使用 `$figma-plugin-release` skill；本文件只保留本仓库特有配置。
+- Figma 插件版本使用 `Version N`；对应 Git tag 使用 `figma-vN`，例如 `figma-v9`。
+- Release notes 文件路径为 `figma-plugin-changelog/releases/figma-vN.md`；该文件必须进入 release PR 并合并到 `main`，因为 `figma-vN` tag 指向的 commit 必须包含它，`.github/workflows/figma-release.yml` 会把它作为 release notes 输入。
+- Release notes 使用英文 + 简体中文，内容应可直接复用到 Figma 插件后台；不要重复写 `# Version N`、`English`、`中文` 这类冗余标题，GitHub Release title 已提供版本标题。
+- `figma-plugin-changelog/VERSION_HISTORY.md` 只保留 Version 8 及以前的历史记录；Version 9 及以后通过 GitHub Releases 记录。
+- 推送 `figma-v*` tag 会触发 `.github/workflows/figma-release.yml`，构建 `dist/`，上传 `small-image-compressor-figma-vN.zip`，并创建或更新 draft GitHub Release。
+- 远端仓库使用 GitHub Rulesets 保护 `main` 和 `staging`（规则集：`Main-Staging Protection`）；不要直接 push 到这些分支，release PR 默认使用 `gh pr merge --merge` 合并。
+- 实际更新 Figma 插件仍使用本地同步 `main` 后运行 `npm run build` 生成的 `dist/manifest.json` 和 `dist/` 产物。

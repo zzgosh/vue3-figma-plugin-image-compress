@@ -8,14 +8,32 @@ Small Image Compressor is a Figma plugin that exports selected images and compre
 - Support `PNG`, `JPG`, and `WebP`
 - Offer four compression levels: `None`, `Light`, `Medium`, and `Extreme`
 - Support export scales from `0.5x` to `8x`
-- Show original size, compressed size, and processing time
+- Export real WebP bytes for both single-file and ZIP downloads
+- Compare compressed exports against the same-format `None` baseline
+- Keep the smaller same-format result when compression would increase file size
+- Show output size and processing time for `None`; show size change and processing time for compressed exports
 - Bundle multi-file exports into a ZIP archive
-- Optionally append compression suffixes to exported file names
+- Add scale and compression suffixes by default, with a `Disable Suffix` option
 
 ## Directory Structure
 
 ```text
 .
+├── .agents
+│   └── skills
+│       └── figma-plugin-release
+│           ├── SKILL.md
+│           ├── agents
+│           │   └── openai.yaml
+│           └── references
+│               └── figma-release-workflow.md
+├── .github
+│   └── workflows
+│       └── figma-release.yml
+├── .gitignore
+├── .prettierrc
+├── .vscode
+│   └── extensions.json
 ├── AGENTS.md
 ├── CLAUDE.md
 ├── LICENSE
@@ -24,7 +42,9 @@ Small Image Compressor is a Figma plugin that exports selected images and compre
 │   └── code.ts
 ├── figma-plugin-changelog
 │   ├── ABOUT.md
-│   └── VERSION_HISTORY.md
+│   ├── VERSION_HISTORY.md
+│   └── releases
+│       └── figma-v9.md
 ├── index.html
 ├── package-lock.json
 ├── package.json
@@ -90,7 +110,10 @@ To test the plugin in Figma Desktop:
 The `figma-plugin-changelog/` directory contains reusable content for Figma Community releases:
 
 - `ABOUT.md`: plugin description and usage copy
-- `VERSION_HISTORY.md`: version history for release notes
+- `VERSION_HISTORY.md`: historical release notes through Version 8
+- `releases/figma-vN.md`: bilingual GitHub and Figma release notes for Version N
+
+Pushing a `figma-vN` tag triggers `.github/workflows/figma-release.yml`, which builds `dist/`, packages `small-image-compressor-figma-vN.zip`, and creates or updates a draft GitHub Release.
 
 ## Contributing
 
