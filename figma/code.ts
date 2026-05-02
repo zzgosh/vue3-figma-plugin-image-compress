@@ -76,6 +76,7 @@ figma.ui.onmessage = async (msg) => {
       type: 'download',
       files: files,
       compressionLevel: msg.compressionLevel,
+      disableSuffix: msg.disableSuffix,
       elementIds: figma.currentPage.selection.map((node) => node.id)
     })
   }

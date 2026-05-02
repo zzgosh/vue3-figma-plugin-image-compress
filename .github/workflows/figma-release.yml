@@ -1,0 +1,93 @@
+name: Figma Plugin Release
+
+on:
+  push:
+    tags:
+      - 'figma-v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: figma-release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.18.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build plugin
+        run: npm run build
+
+      - name: Read release metadata
+        id: release
+        run: |
+          set -euo pipefail
+
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#figma-v}"
+          NOTES_FILE="figma-plugin-changelog/releases/${TAG}.md"
+          ASSET_NAME="small-image-compressor-${TAG}.zip"
+
+          if [ "$TAG" = "$VERSION" ] || [ -z "$VERSION" ]; then
+            echo "Tag must use the figma-vN format, for example figma-v9."
+            exit 1
+          fi
+
+          if [ ! -s "$NOTES_FILE" ]; then
+            echo "Missing release notes: $NOTES_FILE"
+            echo "Create this file before pushing the tag. It is reused for GitHub Releases and Figma plugin release notes."
+            exit 1
+          fi
+
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "notes_file=${NOTES_FILE}" >> "$GITHUB_OUTPUT"
+          echo "asset_name=${ASSET_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Package dist
+        run: |
+          set -euo pipefail
+          cd dist
+          zip -r "../${{ steps.release.outputs.asset_name }}" .
+
+      - name: Create or update draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          TAG="${{ steps.release.outputs.tag }}"
+          TITLE="Version ${{ steps.release.outputs.version }}"
+          NOTES_FILE="${{ steps.release.outputs.notes_file }}"
+          ASSET_NAME="${{ steps.release.outputs.asset_name }}"
+          ASSET_LABEL="Figma plugin dist (${TAG})"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" \
+              --title "$TITLE" \
+              --notes-file "$NOTES_FILE" \
+              --draft
+            gh release upload "$TAG" "${ASSET_NAME}#${ASSET_LABEL}" --clobber
+          else
+            gh release create "$TAG" "${ASSET_NAME}#${ASSET_LABEL}" \
+              --verify-tag \
+              --draft \
+              --title "$TITLE" \
+              --notes-file "$NOTES_FILE"
+          fi

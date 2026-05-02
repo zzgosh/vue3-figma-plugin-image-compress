@@ -1,5 +1,7 @@
 # Version History
 
+Version 9 and later are tracked in GitHub Releases. Release note drafts live in `figma-plugin-changelog/releases/` before the matching `figma-v*` tag is pushed.
+
 ## Version 8 on 2025 年 7 月 8 日
 
 Add more export scale options (0.5x, 6x, 8x)
