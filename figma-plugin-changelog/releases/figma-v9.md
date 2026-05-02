@@ -1,7 +1,3 @@
-# Version 9
-
-## English
-
 Improve WebP export reliability and compression feedback.
 
 - Ensure WebP exports use real WebP bytes across single-file and ZIP export paths.
@@ -9,8 +5,6 @@ Improve WebP export reliability and compression feedback.
 - Compare compressed results against the same-format `None` baseline, so WebP compression is compared with WebP instead of the intermediate PNG export.
 - Prevent compressed exports from becoming larger: when compression produces a bigger file, the plugin exports the same-format `None` result and reports `0.0%`.
 - Replace `Append Suffix` with `Disable Suffix`. Suffixes are now enabled by default and reflect the actual exported result.
-
-## 中文
 
 改进 WebP 导出可靠性和压缩反馈。
 
