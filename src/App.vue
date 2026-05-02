@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { handleSingleFile, handleMultipleFiles } from './utils/fileHandler'
-import { Switch, SwitchDescription, SwitchGroup, SwitchLabel } from '@headlessui/vue'
-import { compressionSuffixMap, type CompressionLevel } from './utils/constants'
+import { Switch, SwitchGroup, SwitchLabel } from '@headlessui/vue'
+import { type CompressionLevel } from './utils/constants'
 
 const format = ref('PNG')
 const compressionLevel = ref<CompressionLevel>('medium')
@@ -11,7 +11,7 @@ const originalSize = ref(0)
 const compressedSize = ref(0)
 const selectedCount = ref(0)
 const isExporting = ref(false)
-const enabled = ref<boolean>(false)
+const disableSuffix = ref<boolean>(false)
 const exportWasCompressed = ref(false)
 
 const compressedElementIds = ref<string[]>([])
@@ -54,7 +54,7 @@ const exportElements = async () => {
           format: format.value,
           compressionLevel: compressionLevel.value,
           exportScale: exportScale.value,
-          enableSuffix: enabled.value
+          disableSuffix: disableSuffix.value
         }
       },
       '*'
@@ -73,12 +73,12 @@ onMounted(() => {
       try {
         compressionStartTime.value = Date.now()
         const activeCompressionLevel = getCompressionLevel(msg.compressionLevel)
-        const activeEnableSuffix = Boolean(msg.enableSuffix)
+        const activeDisableSuffix = Boolean(msg.disableSuffix)
         let result
         if (msg.files.length === 1) {
-          result = await handleSingleFile(msg.files[0], activeCompressionLevel, activeEnableSuffix)
+          result = await handleSingleFile(msg.files[0], activeCompressionLevel, activeDisableSuffix)
         } else {
-          result = await handleMultipleFiles(msg.files, activeCompressionLevel, activeEnableSuffix)
+          result = await handleMultipleFiles(msg.files, activeCompressionLevel, activeDisableSuffix)
         }
         compressionTime.value = (Date.now() - compressionStartTime.value) / 1000
 
@@ -140,13 +140,6 @@ const getFileCountText = () => {
   return `${action} ${count} image${count > 1 ? 's' : ''}`
 }
 
-// const getFileNameExample = () => {
-//   const baseName = 'image_example'
-//   const scaleStr = exportScale.value !== '1x' && enabled.value ? `_${exportScale.value}` : ''
-//   const compressionStr = compressionLevel.value !== 'none' && enabled.value ? compressionSuffixMap[compressionLevel.value] : ''
-//   const extension = `.${format.value.toLowerCase()}`
-//   return `${baseName}${scaleStr}${compressionStr}${extension}`
-// }
 </script>
 
 <template>
@@ -197,20 +190,19 @@ const getFileCountText = () => {
 
     <SwitchGroup as="div" class="flex items-center justify-between mb-5">
       <span class="flex flex-grow flex-col">
-        <SwitchLabel as="span" class="text-sm text-gray-500" passive>Append Suffix</SwitchLabel>
-        <!-- <SwitchDescription as="span" class="text-sm text-gray-500"> {{ getFileNameExample() }} </SwitchDescription> -->
+        <SwitchLabel as="span" class="text-sm text-gray-500" passive>Disable Suffix</SwitchLabel>
       </span>
       <Switch
-        v-model="enabled"
+        v-model="disableSuffix"
         :class="[
-          enabled ? 'bg-blue-500' : 'bg-gray-200',
+          disableSuffix ? 'bg-blue-500' : 'bg-gray-200',
           'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out'
         ]"
       >
         <span
           aria-hidden="true"
           :class="[
-            enabled ? 'translate-x-5' : 'translate-x-0',
+            disableSuffix ? 'translate-x-5' : 'translate-x-0',
             'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out'
           ]"
         />

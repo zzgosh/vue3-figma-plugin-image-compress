@@ -35,16 +35,17 @@ const getBaseNameAndExtension = (fileName: string) => {
 
 const getInitialFormat = (format: string) => (format === 'webp' ? 'png' : format)
 
-const processFile = async (file: FileData, compressionLevel: CompressionLevel, enableSuffix: boolean): Promise<ProcessedFile> => {
+const processFile = async (file: FileData, compressionLevel: CompressionLevel, disableSuffix: boolean): Promise<ProcessedFile> => {
   const initialFormat = getInitialFormat(file.format)
   const sourceBlob = new Blob([file.buffer], { type: `image/${initialFormat}` })
+  const shouldAddSuffix = !disableSuffix
 
   const { baseName, extension } = getBaseNameAndExtension(file.fileName)
-  const scaleStr = enableSuffix ? `_${file.scale}` : ''
+  const scaleStr = shouldAddSuffix ? `_${file.scale}` : ''
   const finalFileName = `${baseName}${scaleStr}${extension}`
 
   const baselineResult =
-    file.format === 'webp' ? await compressionHandler(sourceBlob, 'webp', 'none', finalFileName, enableSuffix) : null
+    file.format === 'webp' ? await compressionHandler(sourceBlob, 'webp', 'none', finalFileName, shouldAddSuffix) : null
   const baselineBlob = baselineResult?.blob ?? sourceBlob
   const baselineFileName = baselineResult?.fileName ?? finalFileName
 
@@ -57,7 +58,16 @@ const processFile = async (file: FileData, compressionLevel: CompressionLevel, e
     }
   }
 
-  const compressedResult = await compressionHandler(sourceBlob, file.format, compressionLevel, finalFileName, enableSuffix)
+  const compressedResult = await compressionHandler(sourceBlob, file.format, compressionLevel, finalFileName, shouldAddSuffix)
+  if (compressedResult.compressedSize > baselineBlob.size) {
+    return {
+      blob: baselineBlob,
+      fileName: baselineFileName,
+      baselineSize: baselineBlob.size,
+      outputSize: baselineBlob.size
+    }
+  }
+
   return {
     blob: compressedResult.blob,
     fileName: compressedResult.fileName,
@@ -69,9 +79,9 @@ const processFile = async (file: FileData, compressionLevel: CompressionLevel, e
 export const handleSingleFile = async (
   file: FileData,
   compressionLevel: CompressionLevel,
-  enableSuffix: boolean
+  disableSuffix: boolean
 ): Promise<ExportResult> => {
-  const processedFile = await processFile(file, compressionLevel, enableSuffix)
+  const processedFile = await processFile(file, compressionLevel, disableSuffix)
   downloadFile(processedFile.blob, processedFile.fileName)
 
   return {
@@ -83,7 +93,7 @@ export const handleSingleFile = async (
 export const handleMultipleFiles = async (
   files: FileData[],
   compressionLevel: CompressionLevel,
-  enableSuffix: boolean
+  disableSuffix: boolean
 ): Promise<ExportResult> => {
   const limit = pLimit(3)
   let totalOriginalSize = 0
@@ -92,7 +102,7 @@ export const handleMultipleFiles = async (
   const processedFiles = await Promise.all(
     files.map((file) =>
       limit(async () => {
-        const processedFile = await processFile(file, compressionLevel, enableSuffix)
+        const processedFile = await processFile(file, compressionLevel, disableSuffix)
 
         totalOriginalSize += processedFile.baselineSize
         totalCompressedSize += processedFile.outputSize
