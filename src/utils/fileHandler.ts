@@ -10,7 +10,18 @@ interface FileData {
   scale: string
 }
 
-// 修改文件名处理逻辑
+interface ProcessedFile {
+  blob: Blob
+  fileName: string
+  baselineSize: number
+  outputSize: number
+}
+
+interface ExportResult {
+  originalSize: number
+  compressedSize: number
+}
+
 const getBaseNameAndExtension = (fileName: string) => {
   const lastDotIndex = fileName.lastIndexOf('.')
   if (lastDotIndex === -1) {
@@ -22,36 +33,50 @@ const getBaseNameAndExtension = (fileName: string) => {
   }
 }
 
-export const handleSingleFile = async (
-  file: FileData,
-  compressionLevel: CompressionLevel,
-  enableSuffix: boolean
-): Promise<{ originalSize: number; compressedSize: number }> => {
-  // 如果是 WebP 格式,先用 PNG 导出再转换
-  const initialFormat = file.format === 'webp' ? 'png' : file.format
-  let blob = new Blob([file.buffer], { type: `image/${initialFormat}` })
-  const originalSize = blob.size
+const getInitialFormat = (format: string) => (format === 'webp' ? 'png' : format)
 
-  // 先处理基本文件名（包含缩放后缀）
+const processFile = async (file: FileData, compressionLevel: CompressionLevel, enableSuffix: boolean): Promise<ProcessedFile> => {
+  const initialFormat = getInitialFormat(file.format)
+  const sourceBlob = new Blob([file.buffer], { type: `image/${initialFormat}` })
+
   const { baseName, extension } = getBaseNameAndExtension(file.fileName)
   const scaleStr = enableSuffix ? `_${file.scale}` : ''
   const finalFileName = `${baseName}${scaleStr}${extension}`
 
-  if (compressionLevel !== 'none') {
-    const result = await compressionHandler(blob, file.format, compressionLevel, finalFileName, enableSuffix)
-    blob = result.blob
-    downloadFile(blob, result.fileName)
-    return { originalSize, compressedSize: result.compressedSize }
-  } else {
-    if (file.format === 'webp') {
-      // 即使不压缩也需要转换格式
-      const result = await compressionHandler(blob, 'webp', 'none', finalFileName, enableSuffix)
-      blob = result.blob
-      downloadFile(blob, result.fileName)
-      return { originalSize, compressedSize: result.blob.size }
+  const baselineResult =
+    file.format === 'webp' ? await compressionHandler(sourceBlob, 'webp', 'none', finalFileName, enableSuffix) : null
+  const baselineBlob = baselineResult?.blob ?? sourceBlob
+  const baselineFileName = baselineResult?.fileName ?? finalFileName
+
+  if (compressionLevel === 'none') {
+    return {
+      blob: baselineBlob,
+      fileName: baselineFileName,
+      baselineSize: baselineBlob.size,
+      outputSize: baselineBlob.size
     }
-    downloadFile(blob, finalFileName)
-    return { originalSize, compressedSize: originalSize }
+  }
+
+  const compressedResult = await compressionHandler(sourceBlob, file.format, compressionLevel, finalFileName, enableSuffix)
+  return {
+    blob: compressedResult.blob,
+    fileName: compressedResult.fileName,
+    baselineSize: baselineBlob.size,
+    outputSize: compressedResult.compressedSize
+  }
+}
+
+export const handleSingleFile = async (
+  file: FileData,
+  compressionLevel: CompressionLevel,
+  enableSuffix: boolean
+): Promise<ExportResult> => {
+  const processedFile = await processFile(file, compressionLevel, enableSuffix)
+  downloadFile(processedFile.blob, processedFile.fileName)
+
+  return {
+    originalSize: processedFile.baselineSize,
+    compressedSize: processedFile.outputSize
   }
 }
 
@@ -59,42 +84,20 @@ export const handleMultipleFiles = async (
   files: FileData[],
   compressionLevel: CompressionLevel,
   enableSuffix: boolean
-): Promise<{ originalSize: number; compressedSize: number }> => {
-  const limit = pLimit(3) // 限制同时处理3个文件
+): Promise<ExportResult> => {
+  const limit = pLimit(3)
   let totalOriginalSize = 0
   let totalCompressedSize = 0
 
   const processedFiles = await Promise.all(
     files.map((file) =>
       limit(async () => {
-        const initialFormat = file.format === 'webp' ? 'png' : file.format
-        let blob = new Blob([file.buffer], { type: `image/${initialFormat}` })
-        // 先处理基本文件名（包含缩放后缀）
-        const { baseName, extension } = getBaseNameAndExtension(file.fileName)
-        const scaleStr = enableSuffix ? `_${file.scale}` : ''
-        const finalFileName = `${baseName}${scaleStr}${extension}`
-        let fileName = finalFileName
+        const processedFile = await processFile(file, compressionLevel, enableSuffix)
 
-        totalOriginalSize += blob.size
+        totalOriginalSize += processedFile.baselineSize
+        totalCompressedSize += processedFile.outputSize
 
-        if (compressionLevel !== 'none') {
-          const result = await compressionHandler(blob, file.format, compressionLevel, finalFileName, enableSuffix)
-          blob = result.blob
-          fileName = result.fileName
-          totalCompressedSize += result.compressedSize
-        } else {
-          if (file.format === 'webp') {
-            const result = await compressionHandler(blob, 'webp', 'none', finalFileName, enableSuffix)
-            blob = result.blob
-            fileName = result.fileName
-            totalCompressedSize += result.compressedSize
-          } else {
-            totalCompressedSize += blob.size
-            fileName = finalFileName
-          }
-        }
-
-        return { blob, fileName }
+        return { blob: processedFile.blob, fileName: processedFile.fileName }
       })
     )
   )

@@ -12,6 +12,7 @@ const compressedSize = ref(0)
 const selectedCount = ref(0)
 const isExporting = ref(false)
 const enabled = ref<boolean>(false)
+const exportWasCompressed = ref(false)
 
 const compressedElementIds = ref<string[]>([])
 
@@ -32,6 +33,13 @@ const showErrorMessage = (message: string) => {
 const getElementIds = (value: unknown): string[] => {
   if (!Array.isArray(value)) return []
   return value.filter((id): id is string => typeof id === 'string')
+}
+
+const getCompressionLevel = (value: unknown): CompressionLevel => {
+  if (value === 'none' || value === 'light' || value === 'medium' || value === 'extreme') {
+    return value
+  }
+  return compressionLevel.value
 }
 
 const exportElements = async () => {
@@ -64,16 +72,19 @@ onMounted(() => {
     if (msg.type === 'download') {
       try {
         compressionStartTime.value = Date.now()
+        const activeCompressionLevel = getCompressionLevel(msg.compressionLevel)
+        const activeEnableSuffix = Boolean(msg.enableSuffix)
         let result
         if (msg.files.length === 1) {
-          result = await handleSingleFile(msg.files[0], compressionLevel.value as CompressionLevel, enabled.value)
+          result = await handleSingleFile(msg.files[0], activeCompressionLevel, activeEnableSuffix)
         } else {
-          result = await handleMultipleFiles(msg.files, compressionLevel.value as CompressionLevel, enabled.value)
+          result = await handleMultipleFiles(msg.files, activeCompressionLevel, activeEnableSuffix)
         }
         compressionTime.value = (Date.now() - compressionStartTime.value) / 1000
 
         originalSize.value = result.originalSize
         compressedSize.value = result.compressedSize
+        exportWasCompressed.value = activeCompressionLevel !== 'none'
         compressedElementIds.value = getElementIds(msg.elementIds)
 
         parent.postMessage({ pluginMessage: { type: 'export-complete' } }, '*')
@@ -93,6 +104,7 @@ onMounted(() => {
         originalSize.value = 0
         compressedSize.value = 0
         compressionTime.value = 0
+        exportWasCompressed.value = false
       }
     }
   }
@@ -111,14 +123,21 @@ const formatSize = (size: number) => {
   return (size / 1024).toFixed(2) + ' KB'
 }
 
-const compressionRatio = () => {
+const sizeChangePercentage = () => {
   if (originalSize.value === 0) return '0'
-  return ((1 - compressedSize.value / originalSize.value) * 100).toFixed(1)
+  return ((compressedSize.value / originalSize.value - 1) * 100).toFixed(1)
+}
+
+const sizeChangeLabel = () => {
+  const percentage = Number(sizeChangePercentage())
+  const prefix = percentage > 0 ? '+' : ''
+  return `${prefix}${sizeChangePercentage()}%`
 }
 
 const getFileCountText = () => {
   const count = selectedCount.value
-  return `Compressed ${count} image${count > 1 ? 's' : ''}`
+  const action = exportWasCompressed.value ? 'Compressed' : 'Exported'
+  return `${action} ${count} image${count > 1 ? 's' : ''}`
 }
 
 // const getFileNameExample = () => {
@@ -214,13 +233,16 @@ const getFileCountText = () => {
 
       <div v-if="selectedCount > 0 && originalSize > 0">
         <p class="text-sm text-gray-500 mb-1">{{ getFileCountText() }}</p>
-        <p class="text-[13px]/[18px] text-gray-500">
+        <p v-if="exportWasCompressed" class="text-[13px]/[18px] text-gray-500">
           {{ formatSize(originalSize) }}
           <span class="mx-[2px]">→</span>
           {{ formatSize(compressedSize) }},
-          <span class="ml-[2px]" :class="Number(compressionRatio()) > 0 ? 'text-green-600' : 'text-gray-500'"
-            >{{ Number(compressionRatio()) > 0 ? '-' : '' }}{{ compressionRatio() }}%</span
-          ><span class="text-gray-500" v-if="compressionTime > 0">, {{ compressionTime.toFixed(1) }}s</span>
+          <span class="ml-[2px]" :class="Number(sizeChangePercentage()) < 0 ? 'text-green-600' : 'text-gray-500'">{{ sizeChangeLabel() }}</span
+          ><span class="text-gray-500">, {{ compressionTime.toFixed(1) }}s</span>
+        </p>
+        <p v-else class="text-[13px]/[18px] text-gray-500">
+          {{ formatSize(compressedSize) }},
+          <span class="text-gray-500">{{ compressionTime.toFixed(1) }}s</span>
         </p>
       </div>
     </div>
