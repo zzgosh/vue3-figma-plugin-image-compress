@@ -19,55 +19,27 @@ Small Image Compressor is a Figma plugin that exports selected images and compre
 
 ```text
 .
-├── .agents
-│   └── skills
-│       └── figma-plugin-release
-│           ├── SKILL.md
-│           ├── agents
-│           │   └── openai.yaml
-│           └── references
-│               └── figma-release-workflow.md
-├── .github
-│   └── workflows
-│       └── figma-release.yml
-├── .gitignore
-├── .prettierrc
-├── .vscode
-│   └── extensions.json
-├── AGENTS.md
-├── CLAUDE.md
-├── LICENSE
-├── README.md
-├── figma
-│   └── code.ts
-├── figma-plugin-changelog
-│   ├── ABOUT.md
-│   ├── VERSION_HISTORY.md
-│   └── releases
-│       └── figma-v9.md
-├── index.html
-├── package-lock.json
-├── package.json
-├── postcss.config.js
-├── public
-│   ├── favicon.ico
-│   └── manifest.json
-├── src
-│   ├── App.vue
-│   ├── assets
-│   │   └── logo.png
-│   ├── env.d.ts
-│   ├── main.ts
-│   ├── style.css
-│   └── utils
-│       ├── compressionHandler.ts
-│       ├── constants.ts
-│       ├── fileHandler.ts
-│       └── zipHandler.ts
-├── tailwind.config.js
-├── tsconfig.json
-├── tsconfig.node.json
-└── vite.config.ts
+├── .agents/                    # Repo-local Codex skills for maintainer workflows
+├── .github/workflows/          # GitHub Actions release automation
+├── figma/
+│   └── code.ts                 # Figma plugin main thread
+├── figma-plugin-changelog/     # Figma Community listing and release copy sources
+├── public/
+│   └── manifest.json           # Source manifest; load dist/manifest.json in Figma
+├── src/
+│   ├── App.vue                 # Plugin UI and export controls
+│   ├── main.ts                 # Vue app entry
+│   ├── style.css               # Tailwind and global styles
+│   └── utils/
+│       ├── compressionHandler.ts # Compression options and WebP validation
+│       ├── constants.ts        # Compression types, labels, and suffixes
+│       ├── fileHandler.ts      # Single and multi-file export orchestration
+│       └── zipHandler.ts       # ZIP packaging
+├── package.json                # npm scripts and dependencies
+├── package-lock.json           # Locked dependency tree
+├── tailwind.config.js          # Tailwind CSS configuration
+├── tsconfig.json               # TypeScript project configuration
+└── vite.config.ts              # Vite and plugin build configuration
 ```
 
 ## Installation
@@ -104,16 +76,6 @@ To test the plugin in Figma Desktop:
 3. Go to `Plugins` -> `Development` -> `Import plugin from manifest...`.
 4. Select `dist/manifest.json` instead of `public/manifest.json`.
 5. Re-run the plugin in Figma after each rebuild.
-
-## Release Notes Assets
-
-The `figma-plugin-changelog/` directory contains reusable content for Figma Community releases:
-
-- `ABOUT.md`: plugin description and usage copy
-- `VERSION_HISTORY.md`: historical release notes through Version 8
-- `releases/figma-vN.md`: bilingual GitHub and Figma release notes for Version N
-
-Pushing a `figma-vN` tag triggers `.github/workflows/figma-release.yml`, which builds `dist/`, packages `small-image-compressor-figma-vN.zip`, and creates or updates a draft GitHub Release.
 
 ## Contributing
 
